@@ -1,0 +1,520 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}Distrito 21 | Sistema{% endblock %}</title>
+
+    <meta name="theme-color" content="#111827">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon"
+          href="{% static 'admin_theme/media/logos/favicon.ico' %}">
+
+    <!-- Fuente Inter -->
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700">
+
+    <!-- Estilos globales de Oswald -->
+    <link href="{% static 'admin_theme/plugins/global/plugins.bundle.css' %}"
+          rel="stylesheet">
+
+    <link href="{% static 'admin_theme/css/style.bundle.css' %}"
+          rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+
+    <!-- Estilos personalizados -->
+    <style>
+        /* Marca */
+        .d21-brand {
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+            line-height: 1.1;
+        }
+
+        .d21-brand-name {
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+        }
+
+        .d21-brand-description {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.65);
+            margin-top: 4px;
+        }
+
+        /* Botón hamburguesa */
+        .d21-menu-toggle {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border: none;
+            background: transparent;
+            color: #ffffff;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .d21-menu-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .d21-menu-toggle span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: currentColor;
+            border-radius: 5px;
+        }
+
+        /* Fondo del menú móvil */
+        .app-header-menu.app-header-mobile-drawer {
+            background-color: #ffffff;
+        }
+
+        /* Contenido */
+        .d21-main-content {
+            min-height: calc(100vh - 160px);
+        }
+
+        /* Ajustes para móviles */
+        @media (max-width: 991.98px) {
+            .app-header-primary {
+                min-height: 65px;
+            }
+
+            .d21-brand-name {
+                font-size: 19px;
+            }
+
+            .d21-main-content {
+                min-height: calc(100vh - 90px);
+            }
+        }
+    </style>
+
+</head>
+
+<body id="kt_body"
+      data-kt-app-header-stacked="true"
+      data-kt-app-header-primary-enabled="true"
+      data-kt-app-header-secondary-enabled="true"
+      data-kt-app-toolbar-enabled="false"
+      class="app-default">
+
+    <!-- Configuración del tema -->
+    <script>
+        var defaultThemeMode = "light";
+        var themeMode;
+
+        if (document.documentElement) {
+            if (document.documentElement.hasAttribute("data-bs-theme-mode")) {
+                themeMode = document.documentElement.getAttribute("data-bs-theme-mode");
+            } else if (localStorage.getItem("data-bs-theme") !== null) {
+                themeMode = localStorage.getItem("data-bs-theme");
+            } else {
+                themeMode = defaultThemeMode;
+            }
+
+            if (themeMode === "system") {
+                themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches
+                    ? "dark"
+                    : "light";
+            }
+
+            document.documentElement.setAttribute("data-bs-theme", themeMode);
+        }
+    </script>
+
+    <!-- Aplicación -->
+    <div id="kt_app_root"
+         class="d-flex flex-column flex-root app-root">
+
+        <!-- Página -->
+        <div id="kt_app_page"
+             class="app-page flex-column flex-column-fluid">
+
+            <!-- ======================================= -->
+            <!-- ENCABEZADO -->
+            <!-- ======================================= -->
+
+            <header id="kt_app_header" class="app-header">
+
+                <!-- Barra principal -->
+                <div class="app-header-primary"
+                     data-kt-sticky="true"
+                     data-kt-sticky-name="app-header-primary-sticky"
+                     data-kt-sticky-offset="{default: 'false', lg: '300px'}">
+
+                    <div class="app-container container-xxl
+                                d-flex align-items-center
+                                justify-content-between">
+
+                        <!-- Logo y hamburguesa -->
+                        <div class="d-flex align-items-center">
+
+                            <!-- Botón hamburguesa -->
+                            <button type="button"
+                                    id="kt_app_header_menu_toggle"
+                                    class="d-lg-none d21-menu-toggle me-3"
+                                    aria-label="Abrir menú">
+
+                                <span></span>
+                                <span></span>
+                                <span></span>
+
+                            </button>
+
+                            <!-- Marca -->
+                            <a href="/" class="d21-brand">
+
+                                <span class="d21-brand-name">
+                                    DISTRITO 21
+                                </span>
+
+                                <span class="d21-brand-description">
+                                    BARBER SHOP
+                                </span>
+
+                            </a>
+
+                        </div>
+
+                        <!-- Acciones derecha -->
+                        <div class="app-navbar d-flex align-items-center">
+
+                            <!-- Notificaciones -->
+                            <div class="app-navbar-item ms-2">
+
+                                <button type="button"
+                                        class="btn btn-icon btn-color-white
+                                               btn-active-color-primary"
+                                        aria-label="Notificaciones">
+
+                                    <i class="ki-duotone ki-notification-status fs-1">
+                                        <span class="path1"></span>
+                                        <span class="path2"></span>
+                                        <span class="path3"></span>
+                                    </i>
+
+                                </button>
+
+                            </div>
+
+                            <!-- Usuario -->
+                            <!-- Usuario + Cerrar sesión -->
+                            <div class="app-navbar-item ms-2">
+                                <div class="d-flex align-items-center">
+
+                                    <div class="d-none d-sm-flex flex-column text-end me-3">
+                                        <span class="text-white fw-bold fs-7">
+                                            {{ user.get_full_name|default:user.username }}
+                                        </span>
+                                        <span class="text-white opacity-75 fs-8">
+                                            Administrador
+                                        </span>
+                                    </div>
+
+                                    <div class="symbol symbol-35px me-3">
+                                        <div class="symbol-label bg-light-primary text-primary fw-bold">
+                                            {{ user.username|default:"U"|slice:":1"|upper }}
+                                        </div>
+                                    </div>
+
+                                    {% if user.is_authenticated %}
+                                        <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
+                                            {% csrf_token %}
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-danger fw-semibold d-flex align-items-center"
+                                                    title="Cerrar sesión">
+                                                <i class="ki-duotone ki-exit-right fs-6 me-1">
+                                                    <span class="path1"></span>
+                                                    <span class="path2"></span>
+                                                </i>
+                                                <span class="d-none d-md-inline">Cerrar sesión</span>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+
+                                </div>
+                            </div>
+
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ======================================= -->
+                <!-- NAVEGACIÓN -->
+                <!-- ======================================= -->
+
+                <div id="kt_app_header_wrapper">
+
+                    <div class="app-header-secondary">
+
+                        <div class="app-container container-xxl
+                                    d-flex align-items-stretch">
+
+                            <!-- Menú responsivo de Keenthemes -->
+                            <div class="app-header-menu
+                                        app-header-mobile-drawer
+                                        align-items-stretch flex-grow-1"
+
+                                 data-kt-drawer="true"
+                                 data-kt-drawer-name="app-header-menu"
+                                 data-kt-drawer-activate="{default: true, lg: false}"
+                                 data-kt-drawer-overlay="true"
+                                 data-kt-drawer-width="250px"
+                                 data-kt-drawer-direction="start"
+                                 data-kt-drawer-toggle="#kt_app_header_menu_toggle"
+
+                                 data-kt-swapper="true"
+                                 data-kt-swapper-mode="{default: 'append', lg: 'prepend'}"
+                                 data-kt-swapper-parent="{default: '#kt_app_body', lg: '#kt_app_header_wrapper'}">
+
+                                <!-- Opciones -->
+                                <div id="kt_app_header_menu"
+                                     class="menu menu-rounded
+                                            menu-active-bg
+                                            menu-state-primary
+                                            menu-column menu-lg-row
+                                            menu-title-gray-700
+                                            menu-icon-gray-500
+                                            menu-arrow-gray-500
+                                            menu-bullet-gray-500
+                                            my-5 my-lg-0
+                                            align-items-stretch
+                                            fw-semibold px-2 px-lg-0"
+                                     data-kt-menu="true">
+
+                                    <!-- Dashboard -->
+                                    <div class="menu-item me-lg-2">
+
+                                        <a href="/"
+                                           class="menu-link {% if request.path == '/' %}active{% endif %}">
+
+                                            <span class="menu-title">
+                                                Dashboard
+                                            </span>
+
+                                        </a>
+
+                                    </div>
+
+                                    <!-- Ventas -->
+                                    <div class="menu-item me-lg-2">
+
+                                        <a href="/ventas/"
+                                           class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
+
+                                            <span class="menu-title">
+                                                Ventas
+                                            </span>
+
+                                        </a>
+
+                                    </div>
+
+                                    <!-- Productos -->
+                                    <div class="menu-item me-lg-2">
+
+                                        <a href="/productos/"
+                                           class="menu-link {% if '/productos/' in request.path %}active{% endif %}">
+
+                                            <span class="menu-title">
+                                                Productos
+                                            </span>
+
+                                        </a>
+
+                                    </div>
+
+                                    <!-- Servicios -->
+                                    <div class="menu-item me-lg-2">
+
+                                        <a href="/servicios/"
+                                           class="menu-link {% if '/servicios/' in request.path %}active{% endif %}">
+
+                                            <span class="menu-title">
+                                                Servicios
+                                            </span>
+
+                                        </a>
+
+                                    </div>
+
+                                    <!-- Clientes -->
+                                    <div class="menu-item me-lg-2">
+
+                                        <a href="/clientes/"
+                                           class="menu-link {% if '/clientes/' in request.path %}active{% endif %}">
+
+                                            <span class="menu-title">
+                                                Clientes
+                                            </span>
+
+                                        </a>
+
+                                    </div>
+
+                                    <!-- Reportes -->
+                                    <div class="menu-item me-lg-2">
+
+                                        <a href="/reportes/"
+                                           class="menu-link {% if '/reportes/' in request.path %}active{% endif %}">
+
+                                            <span class="menu-title">
+                                                Reportes
+                                            </span>
+
+                                        </a>
+
+                                    </div>
+
+                                </div>
+                                <!-- Fin opciones -->
+
+                            </div>
+                            <!-- Fin menú responsivo -->
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+            <!-- ======================================= -->
+            <!-- CUERPO DE LA APLICACIÓN -->
+            <!-- ======================================= -->
+
+            <div id="kt_app_body"
+                 class="app-wrapper flex-column flex-row-fluid">
+
+                <main id="kt_app_main"
+                      class="app-main flex-column flex-row-fluid">
+
+                    <div class="app-container container-xxl py-5">
+
+                        <div id="kt_app_content"
+                             class="d21-main-content">
+
+                            <!-- Aquí se muestra el contenido de cada página -->
+                            {% block content %}
+                            {% endblock %}
+
+                        </div>
+
+                    </div>
+
+                </main>
+
+            </div>
+
+            <!-- ======================================= -->
+            <!-- FOOTER -->
+            <!-- ======================================= -->
+
+            <footer class="text-center py-4">
+
+                <span class="text-muted fs-7">
+                    © {% now "Y" %} Distrito 21. Todos los derechos reservados.
+                </span>
+
+            </footer>
+
+        </div>
+        <!-- Fin página -->
+
+    </div>
+    <!-- Fin aplicación -->
+
+
+    <!-- ======================================= -->
+    <!-- JAVASCRIPT -->
+    <!-- ======================================= -->
+
+    <script>
+        var hostUrl = "{% static 'admin_theme/' %}";
+    </script>
+
+    <!-- Plugins globales -->
+    <script src="{% static 'admin_theme/plugins/global/plugins.bundle.js' %}"></script>
+
+    <!-- Scripts principales de Oswald -->
+    <script src="{% static 'admin_theme/js/scripts.bundle.js' %}"></script>
+
+    <!-- Scripts adicionales por página -->
+    {% block extra_js %}
+    {% endblock %}
+<style>
+/* Ajustes de navegación para escritorio */
+@media (min-width: 992px) {
+
+    /* Altura de la barra secundaria */
+    .app-header-secondary {
+        height: 50px !important;
+        min-height: 50px !important;
+        padding: 0 !important;
+    }
+
+    /* Contenedor */
+    .app-header-secondary > .app-container {
+        height: 50px;
+        align-items: center !important;
+    }
+
+    /* Contenedor del menú */
+    .app-header-secondary .app-header-menu {
+        height: 100%;
+        display: flex;
+        align-items: center !important;
+    }
+
+    /* Menú horizontal */
+    .app-header-secondary #kt_app_header_menu {
+        height: 100%;
+        display: flex;
+        align-items: center !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Elementos del menú */
+    .app-header-secondary #kt_app_header_menu > .menu-item {
+        height: 100%;
+        display: flex;
+        align-items: center !important;
+    }
+
+    /* Enlaces */
+    .app-header-secondary #kt_app_header_menu .menu-link {
+        min-height: 50px;
+        display: flex;
+        align-items: center !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+}
+    </style>
+</body>
+</html>

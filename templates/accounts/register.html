@@ -1,0 +1,91 @@
+{% extends 'base.html' %} <!-- Reemplaza por la ruta de tu base.html -->
+
+{% block title %}Distrito 21 | Crear Usuario{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    
+    <!-- Encabezado del Formulario -->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Registrar Nuevo Usuario</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Crea accesos para el personal de Distrito 21</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'accounts:list_users' %}" class="btn btn-sm btn-light-primary">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver a la Lista
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" class="form" action="{% url 'accounts:register' %}">
+        {% csrf_token %}
+        
+        <div class="card-body border-top p-9">
+
+            <!-- Mensajes de Alerta (Django Messages) -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-5 mb-10">
+                        <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2hx {% if message.tags == 'success' %}text-success{% else %}text-danger{% endif %} me-4">
+                            <span class="path1"></span><span class="path2"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <span>{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Fila: Nombre y Apellido -->
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Nombre</label>
+                    <input type="text" name="first_name" value="{{ first_name|default:'' }}" class="form-control form-control-solid bg-transparent" placeholder="Ej. Juan" required />
+                </div>
+
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Apellido</label>
+                    <input type="text" name="last_name" value="{{ last_name|default:'' }}" class="form-control form-control-solid bg-transparent" placeholder="Ej. Pérez" required />
+                </div>
+            </div>
+
+            <!-- Fila: Correo Electrónico y Contraseña -->
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Correo Electrónico</label>
+                    <input type="email" name="email" value="{{ email|default:'' }}" class="form-control form-control-solid bg-transparent" placeholder="correo@ejemplo.com" required />
+                </div>
+
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Contraseña</label>
+                    <input type="password" name="password" class="form-control form-control-solid bg-transparent" placeholder="••••••••" required />
+                </div>
+            </div>
+
+            <!-- Fila: Rol / Tipo de Usuario -->
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Rol de Usuario</label>
+                    <select name="user_type" class="form-select form-select-solid bg-transparent" required>
+                        {% for key, value in user_types %}
+                            <option value="{{ key }}" {% if user_type == key %}selected{% endif %}>{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Acciones del Formulario -->
+        <div class="card-footer d-flex justify-content-end py-6 px-9">
+            <a href="{% url 'accounts:list_users' %}" class="btn btn-light me-3">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                Guardar Usuario
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

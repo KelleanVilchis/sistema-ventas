@@ -1,0 +1,152 @@
+{% extends 'base.html' %} <!-- Reemplaza por la ruta real de tu base.html -->
+
+{% block title %}Distrito 21 | Dashboard{% endblock %}
+
+{% block content %}
+<!-- Contenedor general del Dashboard -->
+<div class="row g-5 g-xl-8 mb-5">
+    
+    <!-- Tarjeta 1: Ventas del Día -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
+            <div class="card-body">
+                <i class="ki-duotone ki-chart-simple text-primary fs-2hx ms-n1">
+                    <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                </i>
+                <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">${{ total_ventas_hoy|default:"0.00" }}</div>
+                <div class="fw-semibold text-muted fs-7">Ventas del Día</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta 2: Servicios Realizados -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
+            <div class="card-body">
+                <i class="ki-duotone ki-cut text-success fs-2hx ms-n1">
+                    <span class="path1"></span><span class="path2"></span>
+                </i>
+                <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">{{ total_servicios|default:"0" }}</div>
+                <div class="fw-semibold text-muted fs-7">Servicios Realizados Hoy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta 3: Clientes Registrados -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
+            <div class="card-body">
+                <i class="ki-duotone ki-profile-user text-info fs-2hx ms-n1">
+                    <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                </i>
+                <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">{{ total_clientes|default:"0" }}</div>
+                <div class="fw-semibold text-muted fs-7">Clientes Totales</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta 4: Ingresos del Mes -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card bg-body hoverable card-xl-stretch mb-xl-8">
+            <div class="card-body">
+                <i class="ki-duotone ki-wallet text-warning fs-2hx ms-n1">
+                    <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                </i>
+                <div class="text-gray-900 fw-bold fs-2 mb-2 mt-5">${{ ingresos_mes|default:"0.00" }}</div>
+                <div class="fw-semibold text-muted fs-7">Ingresos del Mes</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Sección Inferior: Accesos rápidos y Actividad Reciente -->
+<div class="row g-5 g-xl-8">
+    
+    <!-- Columna Izquierda: Acciones Rápidas -->
+    <div class="col-xl-4">
+        <div class="card card-xl-stretch mb-xl-8">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bold fs-3 mb-1">Accesos Rápidos</span>
+                    <span class="text-muted mt-1 fw-semibold fs-7">Operaciones frecuentes de Distrito 21</span>
+                </h3>
+            </div>
+            <div class="card-body pt-5">
+                <div class="d-flex flex-stack mb-7">
+                    <a href="{% url 'accounts:register' %}" class="btn btn-light-primary w-100 py-3 text-start d-flex align-items-center">
+                        <i class="ki-duotone ki-user-add fs-2 me-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                        <span class="fw-bold">Registrar Nuevo Usuario / Empleado</span>
+                    </a>
+                </div>
+                <div class="d-flex flex-stack mb-7">
+                    <a href="#" class="btn btn-light-success w-100 py-3 text-start d-flex align-items-center">
+                        <i class="ki-duotone ki-handcart fs-2 me-3"><span class="path1"></span><span class="path2"></span></i>
+                        <span class="fw-bold">Registrar Nueva Venta</span>
+                    </a>
+                </div>
+                <div class="d-flex flex-stack mb-7">
+                    <a href="{% url 'accounts:list_users' %}" class="btn btn-light-info w-100 py-3 text-start d-flex align-items-center">
+                        <i class="ki-duotone ki-people fs-2 me-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                        <span class="fw-bold">Ver Lista de Cuentas</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Últimos Movimientos / Transacciones -->
+    <div class="col-xl-8">
+        <div class="card card-xl-stretch mb-5 mb-xl-8">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bold fs-3 mb-1">Actividad Reciente en la Barbería</span>
+                    <span class="text-muted mt-1 fw-semibold fs-7">Últimos registros en el sistema</span>
+                </h3>
+            </div>
+            <div class="card-body py-3">
+                <div class="table-responsive">
+                    <table class="table align-middle table-row-dashed fs-6 gy-5">
+                        <thead>
+                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                                <th class="min-w-100px">Servicio / Producto</th>
+                                <th class="min-w-100px">Cliente</th>
+                                <th class="min-w-100px">Atendido por</th>
+                                <th class="min-w-100px text-end">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 fw-semibold">
+                            <!-- Ejemplo estático de fila (puedes iterar con un bucle for de Django más adelante) -->
+                            <tr>
+                                <td>
+                                    <span class="text-gray-800 fw-bold">Corte Clásico + Barba</span>
+                                </td>
+                                <td>Carlos Mendoza</td>
+                                <td>Barbero Principal</td>
+                                <td class="text-end text-success fw-bold">$250.00</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="text-gray-800 fw-bold">Corte Fade</span>
+                                </td>
+                                <td>Alejandro Garza</td>
+                                <td>Empleado 2</td>
+                                <td class="text-end text-success fw-bold">$180.00</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="text-gray-800 fw-bold">Pomada para Cabello</span>
+                                </td>
+                                <td>Jorge Luis</td>
+                                <td>Mostrador</td>
+                                <td class="text-end text-success fw-bold">$150.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends 'base.html' %} <!-- Reemplaza por la ruta de tu base.html -->
+
+{% block title %}Distrito 21 | Cuentas de Usuario{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+
+    
+    <!-- Mensajes de Alerta (Django Messages) -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-5 mb-10">
+                        <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2hx {% if message.tags == 'success' %}text-success{% else %}text-danger{% endif %} me-4">
+                            <span class="path1"></span><span class="path2"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <span>{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+    <!-- Cabecera de la Tarjeta -->
+    <div class="card-header border-0 pt-5">
+        
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Cuentas de Usuario</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Gestión de accesos y personal de Distrito 21</span>
+        </h3>
+        <div class="card-toolbar">
+            <!-- Botón para agregar nuevo usuario (Ajusta la URL según tus rutas) -->
+            <a href="{% url 'accounts:register' %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-plus fs-2"></i> Nuevo Usuario
+            </a>
+        </div>
+    </div>
+
+    <!-- Cuerpo de la Tabla -->
+    <div class="card-body py-3">
+        <div class="table-responsive">
+            <table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_table_users">
+                
+                <!-- Encabezados -->
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th class="min-w-125px">Usuario</th>
+                        <th class="min-w-125px">Nombre Completo</th>
+                        <th class="min-w-100px">Rol / Estado</th>
+                        <th class="min-w-150px">Último Acceso</th>
+                        <th class="text-end min-w-100px">Acciones</th>
+                    </tr>
+                </thead>
+
+                <!-- Filas de la Tabla -->
+                <tbody class="text-gray-600 fw-semibold">
+                    {% for usuario in users %}
+                    <tr>
+                        <!-- Usuario -->
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="d-flex flex-column">
+                                    <span>{{ usuario.email }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Nombre Completo -->
+                        <td>
+                            {{ usuario.get_full_name|default:"No especificado" }}
+                        </td>
+
+                        <!-- Estado / Rol -->
+                        <td>
+                            {% if usuario.is_active %}
+                                <span class="badge badge-light-success fs-7 fw-bold">Activo</span>
+                            {% else %}
+                                <span class="badge badge-light-danger fs-7 fw-bold">Inactivo</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Último Acceso -->
+                        <td>
+                            {{ usuario.last_login|date:"d/m/Y H:i"|default:"Nunca" }}
+                        </td>
+
+                        <!-- Acciones -->
+                        <td class="text-end">
+                            <a href="{% url 'accounts:edit_user' user_id=usuario.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
+                                <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
+                            </a>
+                            <form action="{% url 'accounts:delete_user' user_id=usuario.id %}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este usuario?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" title="Eliminar">
+                                    <i class="ki-duotone ki-trash fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-10 text-muted">
+                            No hay cuentas de usuario registradas en el sistema.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
