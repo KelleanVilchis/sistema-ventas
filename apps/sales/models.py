@@ -1,5 +1,7 @@
 from django.db import models
 from apps.accounts.models import AppUser
+from apps.catalog.models import Product, Currency
+from apps.company.models import Company
 
 
 class Combo(models.Model):
@@ -47,7 +49,7 @@ class Order(models.Model):
     folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)    
     customer = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
-    currency = models.ForeignKey('catalog.Currency', on_delete=models.SET_NULL, null=True, related_name='orders')
+    currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, related_name='orders')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     company = models.ForeignKey('company.Company', on_delete=models.CASCADE, related_name='orders')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -102,7 +104,7 @@ class Expense(models.Model):
         ('REJECTED', 'Rechazado'),
     ]
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    currency = models.ForeignKey('catalog.Currency', on_delete=models.SET_NULL, null=True, related_name='expenses')
+    currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, related_name='expenses')
     description = models.TextField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     company = models.ForeignKey('company.Company', on_delete=models.CASCADE, related_name='expenses')
@@ -113,3 +115,45 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"Expense {self.id} - {self.status}"
+
+
+
+class Inventory(models.Model):
+    product = models.OneToOneField(Product, on_delete=models.CASCADE)        
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.product} - {self.quantity}"
+    
+
+class InventoryMovementType(models.IntegerChoices):
+    IN = 1,"Entrada"
+    OUT = 2,"Salida"
+
+
+class InventoryMovement(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    movement_type = models.SmallIntegerField(choices=InventoryMovementType.choices, default=InventoryMovementType.IN)
+    quantity = models.PositiveIntegerField()
+    currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, related_name='inventory_movements')
+    concept = models.CharField(max_length=255, blank=True, null=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='inventory_movements')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"{self.get_movement_type_display()} - {self.product.name} ({self.quantity})"
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        inventory = Inventory.objects.get(product=self.product)
+
+        if self.movement_type == InventoryMovementType.IN:
+            inventory.quantity += self.quantity
+        elif self.movement_type == InventoryMovementType.OUT:
+            if self.quantity > inventory.quantity:
+                raise ValueError("No hay suficiente inventario para esta salida.")
+            inventory.quantity -= self.quantity
+
+        inventory.save()
