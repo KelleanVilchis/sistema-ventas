@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Editar Compañía{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    
+    <!-- Encabezado del Formulario -->
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Editar Compañía</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Modifica la información corporativa de {{ company.name }}</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'company:company_index' %}" class="btn btn-sm btn-light-primary">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver a la Lista
+            </a>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <form method="post" class="form">
+        {% csrf_token %}
+        
+        <div class="card-body border-top p-9">
+
+            <!-- Mensajes de Alerta -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-5 mb-10">
+                        <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2hx {% if message.tags == 'success' %}text-success{% else %}text-danger{% endif %} me-4">
+                            <span class="path1"></span><span class="path2"></span>
+                        </i>
+                        <div class="d-flex flex-column">
+                            <span>{{ message }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Fila: Nombre y Teléfono -->
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Nombre de la Compañía</label>
+                    <input type="text" name="name" value="{{ company.name }}" class="form-control form-control-solid bg-transparent" required />
+                </div>
+
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Teléfono</label>
+                    <input type="text" name="phone" value="{{ company.phone }}" class="form-control form-control-solid bg-transparent" required />
+                </div>
+            </div>
+
+            <!-- Fila: Dirección -->
+            <div class="row mb-6">
+                <div class="col-lg-12 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Dirección</label>
+                    <input type="text" name="address" value="{{ company.address }}" class="form-control form-control-solid bg-transparent" required />
+                </div>
+            </div>
+
+            <!-- Fila: Propietario y Estado (Selected) -->
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Propietario</label>
+                    <select name="owner" class="form-select form-select-solid bg-transparent" required>
+                        {% for user in users %}
+                            <option value="{{ user.id }}" {% if company.owner.id == user.id %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.email }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-lg-6 fv-row d-flex align-items-center mt-8">
+                    <div class="form-check form-check-custom form-check-solid">
+                        <input class="form-check-input" type="checkbox" name="selected" id="selected" {% if company.selected %}checked{% endif %} />
+                        <label class="form-check-label fw-semibold fs-6 text-gray-800 ms-3" for="selected">
+                            Marcar como Compañía Seleccionada / Activa principal
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fila: Descripción -->
+            <div class="row mb-6">
+                <div class="col-lg-12 fv-row">
+                    <label class="form-label fw-semibold fs-6">Descripción (Opcional)</label>
+                    <textarea name="description" class="form-control form-control-solid bg-transparent" rows="3">{{ company.description|default:'' }}</textarea>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Acciones del Formulario -->
+        <div class="card-footer d-flex justify-content-end py-6 px-9">
+            <a href="{% url 'company:company_index' %}" class="btn btn-light me-3">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                Actualizar Cambios
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

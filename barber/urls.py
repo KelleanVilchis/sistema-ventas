@@ -18,8 +18,13 @@ from django.contrib import admin
 from django.urls import include, path
 from . import views
 
+# Nota: Se eliminó 'app_name = 'barber'' de aquí porque el archivo raíz no lo requiere.
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.DashboardView.as_view(), name='dashboard'),
     path('accounts/', include('apps.accounts.urls', namespace='accounts')),
+    path('company/', include('apps.company.urls', namespace='company')),
+    path('catalog/', include('apps.catalog.urls', namespace='catalog')),
+    path('sales/', include('apps.sales.urls', namespace='sales')),
 ]
