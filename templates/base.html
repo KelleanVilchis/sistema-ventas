@@ -1,4 +1,3 @@
-
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -215,7 +214,6 @@
 
                             </div>
 
-                            <!-- Usuario -->
                             <!-- Usuario + Cerrar sesión -->
                             <div class="app-navbar-item ms-2">
                                 <div class="d-flex align-items-center">
@@ -251,9 +249,6 @@
                                     {% endif %}
 
                                 </div>
-                            </div>
-
-
                             </div>
 
                         </div>
@@ -307,86 +302,81 @@
 
                                     <!-- Dashboard -->
                                     <div class="menu-item me-lg-2">
-
-                                        <a href="/"
+                                        <a href="{% url 'dashboard' %}"
                                            class="menu-link {% if request.path == '/' %}active{% endif %}">
-
-                                            <span class="menu-title">
-                                                Dashboard
-                                            </span>
-
+                                            <span class="menu-title">Dashboard</span>
                                         </a>
+                                    </div>
 
+                                    <!-- Compañías (Company) -->
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'company:company_index' %}"
+                                           class="menu-link {% if '/company/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Compañías</span>
+                                        </a>
+                                    </div>
+
+                                    <!-- Catálogo (Desplegable) -->
+                                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" 
+                                         data-kt-menu-placement="bottom-start" 
+                                         class="menu-item menu-lg-down-accordion me-lg-2 {% if '/catalog/' in request.path %}here show{% endif %}">
+                                        
+                                        <span class="menu-link">
+                                            <span class="menu-title">Catálogo</span>
+                                            <span class="menu-arrow d-lg-none"></span>
+                                        </span>
+                                        
+                                        <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-2 py-2 py-lg-4 w-lg-200px">
+                                            
+                                            <!-- Productos -->
+                                            <div class="menu-item">
+                                                <a class="menu-link {% if '/catalog/products/' in request.path %}active{% endif %}" href="{% url 'catalog:product_list' %}">
+                                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">Productos</span>
+                                                </a>
+                                            </div>
+
+                                            <!-- Categorías -->
+                                            <div class="menu-item">
+                                                <a class="menu-link {% if '/catalog/categories/' in request.path %}active{% endif %}" href="{% url 'catalog:category_list' %}">
+                                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">Categorías</span>
+                                                </a>
+                                            </div>
+
+                                            <!-- Monedas -->
+                                            <div class="menu-item">
+                                                <a class="menu-link {% if '/catalog/currencies/' in request.path %}active{% endif %}" href="{% url 'catalog:currency_list' %}">
+                                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">Monedas</span>
+                                                </a>
+                                            </div>
+
+                                        </div>
                                     </div>
 
                                     <!-- Ventas -->
                                     <div class="menu-item me-lg-2">
-
                                         <a href="/ventas/"
                                            class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
-
-                                            <span class="menu-title">
-                                                Ventas
-                                            </span>
-
+                                            <span class="menu-title">Ventas</span>
                                         </a>
-
-                                    </div>
-
-                                    <!-- Productos -->
-                                    <div class="menu-item me-lg-2">
-
-                                        <a href="/productos/"
-                                           class="menu-link {% if '/productos/' in request.path %}active{% endif %}">
-
-                                            <span class="menu-title">
-                                                Productos
-                                            </span>
-
-                                        </a>
-
-                                    </div>
-
-                                    <!-- Servicios -->
-                                    <div class="menu-item me-lg-2">
-
-                                        <a href="/servicios/"
-                                           class="menu-link {% if '/servicios/' in request.path %}active{% endif %}">
-
-                                            <span class="menu-title">
-                                                Servicios
-                                            </span>
-
-                                        </a>
-
                                     </div>
 
                                     <!-- Clientes -->
                                     <div class="menu-item me-lg-2">
-
                                         <a href="/clientes/"
                                            class="menu-link {% if '/clientes/' in request.path %}active{% endif %}">
-
-                                            <span class="menu-title">
-                                                Clientes
-                                            </span>
-
+                                            <span class="menu-title">Clientes</span>
                                         </a>
-
                                     </div>
 
                                     <!-- Reportes -->
                                     <div class="menu-item me-lg-2">
-
                                         <a href="/reportes/"
                                            class="menu-link {% if '/reportes/' in request.path %}active{% endif %}">
-
-                                            <span class="menu-title">
-                                                Reportes
-                                            </span>
-
+                                            <span class="menu-title">Reportes</span>
                                         </a>
-
                                     </div>
 
                                 </div>
@@ -418,7 +408,7 @@
                         <div id="kt_app_content"
                              class="d21-main-content">
 
-                            <!-- Aquí se muestra el contenido de cada página -->
+                            <!-- Contenido de cada página -->
                             {% block content %}
                             {% endblock %}
 
@@ -466,55 +456,56 @@
     <!-- Scripts adicionales por página -->
     {% block extra_js %}
     {% endblock %}
-<style>
-/* Ajustes de navegación para escritorio */
-@media (min-width: 992px) {
 
-    /* Altura de la barra secundaria */
-    .app-header-secondary {
-        height: 50px !important;
-        min-height: 50px !important;
-        padding: 0 !important;
-    }
+    <style>
+    /* Ajustes de navegación para escritorio */
+    @media (min-width: 992px) {
 
-    /* Contenedor */
-    .app-header-secondary > .app-container {
-        height: 50px;
-        align-items: center !important;
-    }
+        /* Altura de la barra secundaria */
+        .app-header-secondary {
+            height: 50px !important;
+            min-height: 50px !important;
+            padding: 0 !important;
+        }
 
-    /* Contenedor del menú */
-    .app-header-secondary .app-header-menu {
-        height: 100%;
-        display: flex;
-        align-items: center !important;
-    }
+        /* Contenedor */
+        .app-header-secondary > .app-container {
+            height: 50px;
+            align-items: center !important;
+        }
 
-    /* Menú horizontal */
-    .app-header-secondary #kt_app_header_menu {
-        height: 100%;
-        display: flex;
-        align-items: center !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-    }
+        /* Contenedor del menú */
+        .app-header-secondary .app-header-menu {
+            height: 100%;
+            display: flex;
+            align-items: center !important;
+        }
 
-    /* Elementos del menú */
-    .app-header-secondary #kt_app_header_menu > .menu-item {
-        height: 100%;
-        display: flex;
-        align-items: center !important;
-    }
+        /* Menú horizontal */
+        .app-header-secondary #kt_app_header_menu {
+            height: 100%;
+            display: flex;
+            align-items: center !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
 
-    /* Enlaces */
-    .app-header-secondary #kt_app_header_menu .menu-link {
-        min-height: 50px;
-        display: flex;
-        align-items: center !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
+        /* Elementos del menú */
+        .app-header-secondary #kt_app_header_menu > .menu-item {
+            height: 100%;
+            display: flex;
+            align-items: center !important;
+        }
+
+        /* Enlaces */
+        .app-header-secondary #kt_app_header_menu .menu-link {
+            min-height: 50px;
+            display: flex;
+            align-items: center !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
     }
-}
     </style>
 </body>
 </html>

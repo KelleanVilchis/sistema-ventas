@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Productos{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Catálogo de Productos</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Gestión del inventario y artículos a la venta</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'catalog:product_create' %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-plus fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i> Nuevo Producto
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-4 mb-4">
+                    <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2x me-3"><span class="path1"></span><span class="path2"></span></i>
+                    <div class="d-flex flex-column fs-7"><span>{{ message }}</span></div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- VISTA TABLA (DESKTOP) -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle table-row-dashed fs-6 gy-5">
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th class="min-w-100px">SKU</th>
+                        <th class="min-w-175px">Producto</th>
+                        <th class="min-w-125px">Categoría</th>
+                        <th class="min-w-100px text-end">P. Compra</th>
+                        <th class="min-w-100px text-end">P. Venta</th>
+                        <th class="min-w-80px text-center">Moneda</th>
+                        <th class="text-end min-w-100px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 fw-semibold">
+                    {% for product in products %}
+                    <tr>
+                        <td><span class="badge badge-light-dark fw-bold fs-7">{{ product.sku }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
+                                    <div class="symbol-label fs-4 bg-light-primary text-primary fw-bold">
+                                        {{ product.name|slice:":1"|upper }}
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="text-gray-800 fw-bold mb-1">{{ product.name }}</span>
+                                    <span class="text-muted fs-7">{{ product.description|truncatechars:35|default:"Sin descripción" }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if product.category %}
+                                <span class="badge badge-light-info fw-semibold fs-7">{{ product.category.name }}</span>
+                            {% else %}
+                                <span class="text-muted fs-7">Sin Categoría</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">${{ product.purchase_price }}</td>
+                        <td class="text-end fw-bold text-gray-800">${{ product.sale_price }}</td>
+                        <td class="text-center">
+                            <span class="badge badge-light-secondary fs-8">{{ product.currency.code|default:"-" }}</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'catalog:product_edit' product.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
+                                <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
+                            </a>
+                            <form id="delete-form-prod-{{ product.id }}" action="{% url 'catalog:product_delete' product.id %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" title="Eliminar" onclick="confirmDelete('delete-form-prod-{{ product.id }}', '{{ product.name|escapejs }}')">
+                                    <i class="ki-duotone ki-trash fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-10 text-muted">No hay productos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- VISTA MÓVIL SIMPLIFICADA -->
+        <div class="d-block d-md-none">
+            {% for product in products %}
+            <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="symbol symbol-circle symbol-35px me-3">
+                            <div class="symbol-label fs-7 bg-light-primary text-primary fw-bold">
+                                {{ product.name|slice:":1"|upper }}
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-gray-800 fw-bold fs-6 d-block">{{ product.name }}</span>
+                            <span class="badge badge-light-dark fs-8">SKU: {{ product.sku }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <a href="{% url 'catalog:product_edit' product.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
+                            <i class="ki-duotone ki-pencil fs-4"><span class="path1"></span><span class="path2"></span></i>
+                        </a>
+                        <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" onclick="confirmDelete('delete-form-prodm-{{ product.id }}', '{{ product.name|escapejs }}')">
+                            <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                        </button>
+                        <form id="delete-form-prodm-{{ product.id }}" action="{% url 'catalog:product_delete' product.id %}" method="POST" class="d-none">
+                            {% csrf_token %}
+                        </form>
+                    </div>
+                </div>
+
+                {% if product.description %}
+                    <p class="text-muted fs-7 mb-2">{{ product.description|truncatechars:50 }}</p>
+                {% endif %}
+
+                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded my-2">
+                    <span class="fs-7 text-muted">Categoría: <strong>{{ product.category.name|default:"N/A" }}</strong></span>
+                    <span class="fs-6 fw-bold text-success">${{ product.sale_price }} {{ product.currency.code|default:"" }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-10 text-muted fs-6">No hay productos registrados.</div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function confirmDelete(formId, itemName) {
+        Swal.fire({
+            text: "¿Eliminar el producto '" + itemName + "'?",
+            icon: "warning",
+            showCancelButton: true,
+            buttonsStyling: false,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            customClass: { confirmButton: "btn btn-danger btn-sm", cancelButton: "btn btn-active-light btn-sm" }
+        }).then(function (result) {
+            if (result.value) {
+                document.getElementById(formId).submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

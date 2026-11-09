@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Listado de Categorías{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Categorías de Productos</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Gestión de clasificaciones</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'catalog:category_create' %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-plus fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i> Nueva
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-4 mb-4">
+                    <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2x me-3"><span class="path1"></span><span class="path2"></span></i>
+                    <div class="d-flex flex-column fs-7"><span>{{ message }}</span></div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- VISTA DE TABLA (Desktop) -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle table-row-dashed fs-6 gy-5">
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th class="min-w-150px">Nombre</th>
+                        <th class="min-w-200px">Descripción</th>
+                        <th class="min-w-125px">Creado por</th>
+                        <th class="min-w-125px">Fecha</th>
+                        <th class="text-end min-w-100px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 fw-semibold">
+                    {% for category in categories %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
+                                    <div class="symbol-label fs-3 bg-light-primary text-primary fw-bold">
+                                        {{ category.name|slice:":1"|upper }}
+                                    </div>
+                                </div>
+                                <span class="text-gray-800 fw-bold">{{ category.name }}</span>
+                            </div>
+                        </td>
+                        <td><span class="text-muted">{{ category.description|truncatechars:40|default:"Sin descripción" }}</span></td>
+                        <td>{{ category.created_by.get_full_name|default:category.created_by.email|default:"Sistema" }}</td>
+                        <td>{{ category.date_created|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'catalog:category_edit' category.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
+                                <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
+                            </a>
+                            <form id="delete-form-cat-{{ category.id }}" action="{% url 'catalog:category_delete' category.id %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" title="Eliminar" onclick="confirmDelete('delete-form-cat-{{ category.id }}', '{{ category.name|escapejs }}')">
+                                    <i class="ki-duotone ki-trash fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-10 text-muted">No hay categorías registradas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- VISTA MÓVIL SIMPLIFICADA (Teléfono) -->
+        <div class="d-block d-md-none">
+            {% for category in categories %}
+            <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="symbol symbol-circle symbol-35px me-3">
+                            <div class="symbol-label fs-7 bg-light-primary text-primary fw-bold">
+                                {{ category.name|slice:":1"|upper }}
+                            </div>
+                        </div>
+                        <span class="text-gray-800 fw-bold fs-6">{{ category.name }}</span>
+                    </div>
+                    <!-- Acciones Móvil -->
+                    <div>
+                        <a href="{% url 'catalog:category_edit' category.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
+                            <i class="ki-duotone ki-pencil fs-4"><span class="path1"></span><span class="path2"></span></i>
+                        </a>
+                        <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" onclick="confirmDelete('delete-form-catm-{{ category.id }}', '{{ category.name|escapejs }}')">
+                            <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                        </button>
+                        <form id="delete-form-catm-{{ category.id }}" action="{% url 'catalog:category_delete' category.id %}" method="POST" class="d-none">
+                            {% csrf_token %}
+                        </form>
+                    </div>
+                </div>
+                
+                {% if category.description %}
+                    <p class="text-muted fs-7 mb-2">{{ category.description }}</p>
+                {% endif %}
+
+                <div class="separator separator-dashed my-2"></div>
+                <div class="d-flex justify-content-between text-muted fs-8">
+                    <span>Creado: {{ category.date_created|date:"d/m/Y" }}</span>
+                    <span>Por: {{ category.created_by.email|default:"Sistema"|truncatechars:15 }}</span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-10 text-muted fs-6">No hay categorías registradas.</div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function confirmDelete(formId, itemName) {
+        Swal.fire({
+            text: "¿Eliminar '" + itemName + "'?",
+            icon: "warning",
+            showCancelButton: true,
+            buttonsStyling: false,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            customClass: { confirmButton: "btn btn-danger btn-sm", cancelButton: "btn btn-active-light btn-sm" }
+        }).then(function (result) {
+            if (result.value) {
+                document.getElementById(formId).submit();
+            }
+        });
+    }
+</script>
+{% endblock %}
