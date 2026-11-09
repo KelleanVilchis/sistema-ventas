@@ -363,19 +363,19 @@
                                         </a>
                                     </div>
 
-                                    <!-- Clientes -->
                                     <div class="menu-item me-lg-2">
-                                        <a href="/clientes/"
-                                           class="menu-link {% if '/clientes/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Clientes</span>
+                                        <a href="/ventas/"
+                                           class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Pedidos</span>
                                         </a>
                                     </div>
 
-                                    <!-- Reportes -->
+
+                                    <!-- Clientes -->
                                     <div class="menu-item me-lg-2">
-                                        <a href="/reportes/"
-                                           class="menu-link {% if '/reportes/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Reportes</span>
+                                        <a href="{% url 'sales:combo_list' %}"
+                                           class="menu-link {% if 'combos/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Combos</span>
                                         </a>
                                     </div>
 

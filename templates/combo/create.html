@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Nuevo Combo{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Registrar Nuevo Combo</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Crea paquetes de productos personalizados</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:combo_list' %}" class="btn btn-sm btn-light-primary">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <form method="post" class="form" id="combo-form">
+        {% csrf_token %}
+        <div class="card-body border-top p-9">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger d-flex align-items-center p-5 mb-10">
+                        <i class="ki-duotone ki-shield-cross fs-2hx text-danger me-4"><span class="path1"></span><span class="path2"></span></i>
+                        <div class="d-flex flex-column"><span>{{ message }}</span></div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row mb-4 mb-lg-0">
+                    <label class="form-label required fw-semibold fs-6">Nombre del Combo</label>
+                    <input type="text" name="name" value="{{ name|default:'' }}" class="form-control form-control-solid bg-transparent" placeholder="Ej. Combo Barba + Corte" required />
+                </div>
+            </div>
+
+            <div class="row mb-6">
+                <div class="col-lg-12 fv-row">
+                    <label class="form-label fw-semibold fs-6">Descripción</label>
+                    <textarea name="description" class="form-control form-control-solid bg-transparent" rows="2" placeholder="Detalles del combo...">{{ description|default:'' }}</textarea>
+                </div>
+            </div>
+
+            <!-- SECCIÓN DE PRODUCTOS DINÁMICOS -->
+            <div class="separator separator-dashed my-8"></div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold fs-5 text-gray-800 m-0">Productos Incluidos</h4>
+                <button type="button" class="btn btn-sm btn-light-primary" id="add-item-btn">
+                    <i class="ki-duotone ki-plus fs-2"></i> Añadir Producto
+                </button>
+            </div>
+
+            <div id="items-container">
+                <div class="row mb-3 item-row align-items-center">
+                    <div class="col-lg-7">
+                        <select name="products[]" class="form-select form-select-solid">
+                            <option value="">Selecciona un producto...</option>
+                            {% for prod in products %}
+                                <option value="{{ prod.id }}">{{ prod.name }} (${{ prod.sale_price }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-4">
+                        <input type="number" name="quantities[]" min="1" value="1" class="form-control form-control-solid" placeholder="Cantidad" />
+                    </div>
+                    <div class="col-lg-1 text-end">
+                        <button type="button" class="btn btn-icon btn-danger btn-sm remove-item-btn" title="Eliminar fila">
+                            <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-end py-6 px-9">
+            <a href="{% url 'sales:combo_list' %}" class="btn btn-light me-3">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Combo</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.getElementById('add-item-btn').addEventListener('click', function () {
+        const container = document.getElementById('items-container');
+        const firstRow = container.querySelector('.item-row');
+        const newRow = firstRow.cloneNode(true);
+        newRow.querySelector('select').value = '';
+        newRow.querySelector('input').value = '1';
+        container.appendChild(newRow);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-item-btn')) {
+            const rows = document.querySelectorAll('.item-row');
+            if (rows.length > 1) {
+                e.target.closest('.item-row').remove();
+            } else {
+                Swal.fire({ text: "El combo debe tener al menos un producto.", icon: "info", buttonsStyling: false, confirmButtonText: "Entendido", customClass: { confirmButton: "btn btn-primary btn-sm" } });
+            }
+        }
+    });
+</script>
+{% endblock %}
