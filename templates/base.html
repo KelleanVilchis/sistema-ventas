@@ -364,8 +364,8 @@
                                     </div>
 
                                     <div class="menu-item me-lg-2">
-                                        <a href="/ventas/"
-                                           class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
+                                        <a href="{% url 'sales:order_list' %}"
+                                           class="menu-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}">
                                             <span class="menu-title">Pedidos</span>
                                         </a>
                                     </div>

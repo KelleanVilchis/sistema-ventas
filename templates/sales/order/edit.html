@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Editar Pedido{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Editar Pedido {{ order.folio_number|default:order.id }}</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Modifica los ítems y estado del pedido</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:order_list' %}" class="btn btn-sm btn-light-primary">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <form method="post" class="form">
+        {% csrf_token %}
+        <div class="card-body border-top p-9">
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row mb-4 mb-lg-0">
+                    <label class="form-label required fw-semibold fs-6">Nombre del Cliente</label>
+                    <input type="text" name="customer" value="{{ order.customer }}" class="form-control form-control-solid bg-transparent" required />
+                </div>
+            </div>
+
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row mb-4 mb-lg-0">
+                    <label class="form-label fw-semibold fs-6">Moneda</label>
+                    <select name="currency" class="form-select form-select-solid bg-transparent">
+                        {% for cur in currencies %}
+                            <option value="{{ cur.id }}" {% if order.currency and order.currency.id == cur.id %}selected{% endif %}>{{ cur.name }} ({{ cur.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Estado del Pedido</label>
+                    <select name="status" class="form-select form-select-solid bg-transparent" required>
+                        {% for code, label in status_choices %}
+                            <option value="{{ code }}" {% if order.status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- DETALLE DE ITEMS EN EDICIÓN -->
+            <div class="separator separator-dashed my-8"></div>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-bold fs-5 text-gray-800 m-0">Detalle del Pedido (Ítems)</h4>
+                    <span class="text-muted fs-7">Total General: <strong id="total-order-display" class="text-success fs-4">${{ order.total_amount }}</strong></span>
+                </div>
+                <button type="button" class="btn btn-sm btn-light-primary" id="add-order-item-btn">
+                    <i class="ki-duotone ki-plus fs-2"></i> Añadir Artículo
+                </button>
+            </div>
+
+            <div id="order-items-container">
+                {% for item in order.items.all %}
+                <div class="row mb-3 order-item-row align-items-center bg-light p-3 rounded border border-gray-200">
+                    <div class="col-lg-3 mb-2 mb-lg-0">
+                        <label class="form-label fs-8 text-muted">Tipo</label>
+                        <select name="item_types[]" class="form-select form-select-solid item-type-select">
+                            <option value="PRODUCT" {% if item.product %}selected{% endif %}>Producto</option>
+                            <option value="COMBO" {% if item.combo %}selected{% endif %}>Combo</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-4 mb-2 mb-lg-0">
+                        <label class="form-label fs-8 text-muted">Artículo</label>
+                        <select name="item_ids[]" class="form-select form-select-solid item-id-select" required>
+                            <option value="" data-price="0">Selecciona...</option>
+                            {% for prod in products %}
+                                <option value="{{ prod.id }}" data-type="PRODUCT" data-price="{{ prod.sale_price }}" {% if item.product and item.product.id == prod.id %}selected{% endif %}>[Producto] {{ prod.name }} (${{ prod.sale_price }})</option>
+                            {% endfor %}
+                            {% for comb in combos %}
+                                <option value="{{ comb.id }}" data-type="COMBO" data-price="{{ comb.sale_price }}" {% if item.combo and item.combo.id == comb.id %}selected{% endif %}>[Combo] {{ comb.name }} (${{ comb.sale_price }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-2 mb-2 mb-lg-0">
+                        <label class="form-label fs-8 text-muted">Cantidad</label>
+                        <input type="number" name="quantities[]" min="1" value="{{ item.quantity }}" class="form-control form-control-solid item-qty-input" required />
+                    </div>
+                    <div class="col-lg-2 mb-2 mb-lg-0">
+                        <label class="form-label fs-8 text-muted">Precio Unit.</label>
+                        <input type="number" step="0.01" min="0" name="prices[]" value="{{ item.price|stringformat:'.2f' }}" class="form-control form-control-solid item-price-input" required />
+                    </div>
+                    <div class="col-lg-1 text-end pt-5">
+                        <button type="button" class="btn btn-icon btn-danger btn-sm remove-order-item-btn" title="Eliminar">
+                            <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="row mb-3 order-item-row align-items-center bg-light p-3 rounded border border-gray-200">
+                    <div class="col-lg-3 mb-2 mb-lg-0">
+                        <select name="item_types[]" class="form-select form-select-solid item-type-select">
+                            <option value="PRODUCT">Producto</option>
+                            <option value="COMBO">Combo</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-4 mb-2 mb-lg-0">
+                        <select name="item_ids[]" class="form-select form-select-solid item-id-select" required>
+                            <option value="" data-price="0">Selecciona...</option>
+                            {% for prod in products %}
+                                <option value="{{ prod.id }}" data-type="PRODUCT" data-price="{{ prod.sale_price }}">[Producto] {{ prod.name }} (${{ prod.sale_price }})</option>
+                            {% endfor %}
+                            {% for comb in combos %}
+                                <option value="{{ comb.id }}" data-type="COMBO" data-price="{{ comb.sale_price }}">[Combo] {{ comb.name }} (${{ comb.sale_price }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-2 mb-2 mb-lg-0">
+                        <input type="number" name="quantities[]" min="1" value="1" class="form-control form-control-solid item-qty-input" required />
+                    </div>
+                    <div class="col-lg-2 mb-2 mb-lg-0">
+                        <input type="number" step="0.01" min="0" name="prices[]" value="0.00" class="form-control form-control-solid item-price-input" required />
+                    </div>
+                    <div class="col-lg-1 text-end">
+                        <button type="button" class="btn btn-icon btn-danger btn-sm remove-order-item-btn"><i class="ki-duotone ki-trash fs-4"></i></button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-end py-6 px-9">
+            <a href="{% url 'sales:order_list' %}" class="btn btn-light me-3">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Actualizar Pedido</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    function calculateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('.order-item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty-input').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price-input').value) || 0;
+            total += qty * price;
+        });
+        document.getElementById('total-order-display').innerText = '$' + total.toFixed(2);
+    }
+
+    function filterOptions(row) {
+        const typeSelect = row.querySelector('.item-type-select');
+        const idSelect = row.querySelector('.item-id-select');
+        const selectedType = typeSelect.value;
+
+        Array.from(idSelect.options).forEach(opt => {
+            if (!opt.value) return;
+            const optType = opt.getAttribute('data-type');
+            if (optType === selectedType) {
+                opt.style.display = 'block';
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+    }
+
+    function attachRowEvents(row) {
+        const typeSelect = row.querySelector('.item-type-select');
+        const idSelect = row.querySelector('.item-id-select');
+        const qtyInput = row.querySelector('.item-qty-input');
+        const priceInput = row.querySelector('.item-price-input');
+
+        typeSelect.addEventListener('change', () => {
+            filterOptions(row);
+            idSelect.value = '';
+            priceInput.value = '0.00';
+            calculateOrderTotal();
+        });
+        
+        idSelect.addEventListener('change', () => {
+            const selectedOpt = idSelect.options[idSelect.selectedIndex];
+            const price = selectedOpt.getAttribute('data-price') || '0.00';
+            priceInput.value = parseFloat(price).toFixed(2);
+            calculateOrderTotal();
+        });
+
+        qtyInput.addEventListener('input', calculateOrderTotal);
+        priceInput.addEventListener('input', calculateOrderTotal);
+
+        filterOptions(row);
+    }
+
+    document.getElementById('add-order-item-btn').addEventListener('click', function () {
+        const container = document.getElementById('order-items-container');
+        const firstRow = container.querySelector('.order-item-row');
+        const newRow = firstRow.cloneNode(true);
+        container.appendChild(newRow);
+        attachRowEvents(newRow);
+    });
+
+    document.querySelectorAll('.order-item-row').forEach(row => attachRowEvents(row));
+
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-order-item-btn')) {
+            const rows = document.querySelectorAll('.order-item-row');
+            if (rows.length > 1) {
+                e.target.closest('.order-item-row').remove();
+                calculateOrderTotal();
+            }
+        }
+    });
+</script>
+{% endblock %}
