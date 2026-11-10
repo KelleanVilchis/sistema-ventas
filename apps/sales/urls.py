@@ -13,4 +13,13 @@ urlpatterns = [
     path('orders/edit/<int:order_id>/', views.UpdateOrderView.as_view(), name='order_edit'),
     path('orders/delete/<int:order_id>/', views.DeleteOrderView.as_view(), name='order_delete'),
 
+    path('sales/', views.SaleListView.as_view(), name='sale_list'),
+    path('sales/create/', views.CreateSaleView.as_view(), name='sale_create'),
+    path('sales/edit/<int:sale_id>/', views.UpdateSaleView.as_view(), name='sale_edit'),
+    path('sales/delete/<int:sale_id>/', views.DeleteSaleView.as_view(), name='sale_delete'),
+
+    path('expenses/', views.ExpenseListView.as_view(), name='expense_list'),
+    path('expenses/create/', views.CreateExpenseView.as_view(), name='expense_create'),
+    path('expenses/edit/<int:expense_id>/', views.UpdateExpenseView.as_view(), name='expense_edit'),
+    path('expenses/delete/<int:expense_id>/', views.DeleteExpenseView.as_view(), name='expense_delete'),
 ]

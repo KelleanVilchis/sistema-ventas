@@ -1,10 +1,11 @@
 import uuid
 from django.http import request
 from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
 from django.views import View
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Combo, ComboItem, Product, Order, OrderItem, Currency
+from .models import Combo, ComboItem, Product, Order, OrderItem, Currency, Sale, Expense
 from apps.company.models import Company
 from apps.accounts.models import AppUser
 
@@ -315,3 +316,208 @@ class DeleteOrderView(LoginRequiredMixin, View):
         except Exception as e:
             messages.error(request, 'No se pudo eliminar el pedido.')
         return redirect('sales:order_list')
+
+
+
+class SaleListView(LoginRequiredMixin, View):
+    def get(self, request):
+        sales = Sale.objects.select_related('order', 'created_by').all().order_by('-date_sale')
+        return render(request, 'sales/sales/sale_list.html', {'sales': sales})
+
+
+class CreateSaleView(LoginRequiredMixin, View):
+    def get(self, request):
+        # Solo mostramos órdenes que aún no tengan una venta asociada o todas las disponibles
+        orders = Order.objects.filter(sales__isnull=True).order_by('-created_at')
+        context = {
+            'orders': orders,
+            'status_choices': Sale.STATUS_CHOICES
+        }
+        return render(request, 'sales/sales/create.html', context)
+
+    def post(self, request):
+        order_id = request.POST.get('order')
+        total_amount = request.POST.get('total_amount')
+        date_sale = request.POST.get('date_sale')
+
+        orders = Order.objects.filter(sales__isnull=True).order_by('-created_at')
+        context = {
+            'orders': orders,
+            'status_choices': Sale.STATUS_CHOICES,
+            'order_id': order_id,
+            'total_amount': total_amount,
+            'date_sale': date_sale
+        }
+
+        if not order_id or not total_amount:
+            messages.error(request, 'Debe seleccionar un pedido y especificar el monto total.')
+            return render(request, 'sales/sales/create.html', context)
+
+        try:
+            order_obj = get_object_or_404(Order, id=order_id)
+            folio = f"SALE-{uuid.uuid4().hex[:8].upper()}"
+
+            Sale.objects.create(
+                folio_number=folio,
+                order=order_obj,
+                total_amount=total_amount,
+                date_sale=date_sale if date_sale else timezone.now(),
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
+            messages.success(request, f'Venta {folio} registrada exitosamente.')
+            return redirect('sales:sale_list')
+        except Exception as e:
+            messages.error(request, f'Ocurrió un error al registrar la venta: {e}')
+            return render(request, 'sales/sales/create.html', context)
+
+
+class UpdateSaleView(LoginRequiredMixin, View):
+    def get(self, request, sale_id):
+        sale = get_object_or_404(Sale, id=sale_id)
+        orders = Order.objects.all()
+        context = {
+            'sale': sale,
+            'orders': orders,
+            'status_choices': Sale.STATUS_CHOICES
+        }
+        return render(request, 'sales/sales/edit.html', context)
+
+    def post(self, request, sale_id):
+        sale = get_object_or_404(Sale, id=sale_id)
+        order_id = request.POST.get('order')
+        total_amount = request.POST.get('total_amount')
+        date_sale = request.POST.get('date_sale')
+
+        if not order_id or not total_amount:
+            messages.error(request, 'El pedido y el monto son obligatorios.')
+            return redirect('sales:sale_edit', sale_id=sale.id)
+
+        try:
+            sale.order = get_object_or_404(Order, id=order_id)
+            sale.total_amount = total_amount
+            if date_sale:
+                sale.date_sale = date_sale
+            sale.save()
+
+            messages.success(request, f'Venta {sale.folio_number} actualizada correctamente.')
+            return redirect('sales:sale_list')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar la venta: {e}')
+            return redirect('sales:sale_edit', sale_id=sale.id)
+
+
+class DeleteSaleView(LoginRequiredMixin, View):
+    def post(self, request, sale_id):
+        sale = get_object_or_404(Sale, id=sale_id)
+        try:
+            folio = sale.folio_number
+            sale.delete()
+            messages.success(request, f'La venta "{folio}" fue eliminada correctamente.')
+        except Exception as e:
+            messages.error(request, 'No se pudo eliminar la venta.')
+        return redirect('sales:sale_list')
+
+
+class ExpenseListView(LoginRequiredMixin, View):
+    def get(self, request):
+        expenses = Expense.objects.select_related('company', 'currency', 'created_by').all().order_by('-date_expense')
+        return render(request, 'sales/expense/index.html', {'expenses': expenses})
+
+
+class CreateExpenseView(LoginRequiredMixin, View):
+    def get(self, request):
+        currencies = Currency.objects.all()
+        context = {
+            'currencies': currencies,
+            'status_choices': Expense.STATUS_CHOICES
+        }
+        return render(request, 'sales/expense/create.html', context)
+
+    def post(self, request):
+        amount = request.POST.get('amount')
+        currency_id = request.POST.get('currency')
+        description = request.POST.get('description')
+        status = request.POST.get('status', 'PENDING')
+        date_expense = request.POST.get('date_expense')
+        owner = AppUser.objects.get(id=request.user.id)  #   Assuming the logged-in user is the owner of the company
+        company = Company.objects.get(owner=owner)
+        currencies = Currency.objects.all()
+
+        context = {
+            'amount': amount,
+            'currency_id': currency_id,
+            'description': description,
+            'status': status,
+            'date_expense': date_expense,
+            'currencies': currencies,
+            'status_choices': Expense.STATUS_CHOICES
+        }
+
+        try:
+            currency_obj = Currency.objects.filter(id=currency_id).first() if currency_id else None
+
+            Expense.objects.create(
+                amount=amount,
+                currency=currency_obj,
+                description=description,
+                status=status,
+                company=company,
+                date_expense=date_expense if date_expense else timezone.now(),
+                created_by=request.user if request.user.is_authenticated else None
+            )
+
+            messages.success(request, 'Gasto registrado exitosamente.')
+            return redirect('sales:expense_list')
+        except Exception as e:
+            messages.error(request, f'Ocurrió un error al registrar el gasto: {e}')
+            return render(request, 'sales/expense/create.html', context)
+
+
+class UpdateExpenseView(LoginRequiredMixin, View):
+    def get(self, request, expense_id):
+        expense = get_object_or_404(Expense, id=expense_id)
+        currencies = Currency.objects.all()
+        context = {
+            'expense': expense,
+            'currencies': currencies,
+            'status_choices': Expense.STATUS_CHOICES
+        }
+        return render(request, 'sales/expense/edit.html', context)
+
+    def post(self, request, expense_id):
+        expense = get_object_or_404(Expense, id=expense_id)
+        amount = request.POST.get('amount')
+        currency_id = request.POST.get('currency')
+        description = request.POST.get('description')
+        status = request.POST.get('status')
+        date_expense = request.POST.get('date_expense')
+
+        try:
+            expense.amount = amount
+            expense.currency = Currency.objects.filter(id=currency_id).first() if currency_id else None
+            expense.description = description
+            expense.status = status
+            if date_expense:
+                expense.date_expense = date_expense
+            expense.save()
+
+            messages.success(request, 'Gasto actualizado correctamente.')
+            return redirect('sales:expense_list')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar el gasto: {e}')
+            return redirect('sales:expense_edit', expense_id=expense.id)
+
+
+class DeleteExpenseView(LoginRequiredMixin, View):
+    def post(self, request, expense_id):
+        expense = get_object_or_404(Expense, id=expense_id)
+        try:
+            expense.delete()
+            messages.success(request, 'El gasto fue eliminado correctamente.')
+        except Exception as e:
+            messages.error(request, 'No se pudo eliminar el gasto.')
+        return redirect('sales:expense_list')
+
+
+

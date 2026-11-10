@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Listado de Gastos{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Registro de Gastos</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Control de salidas y egresos operativos</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:expense_create' %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-plus fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i> Nuevo Gasto
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-4 mb-4">
+                    <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2x me-3"><span class="path1"></span><span class="path2"></span></i>
+                    <div class="d-flex flex-column fs-7"><span>{{ message }}</span></div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- TABLA (DESKTOP) -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle table-row-dashed fs-6 gy-5">
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th class="min-w-150px">Descripción</th>
+                        <th class="min-w-125px">Sucursal</th>
+                        <th class="min-w-100px text-end">Monto</th>
+                        <th class="min-w-100px text-center">Estado</th>
+                        <th class="min-w-125px">Fecha de Gasto</th>
+                        <th class="text-end min-w-100px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 fw-semibold">
+                    {% for expense in expenses %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
+                                    <div class="symbol-label fs-3 bg-light-danger text-danger fw-bold">
+                                        $
+                                    </div>
+                                </div>
+                                <span class="text-gray-800 fw-bold">{{ expense.description|truncatechars:40 }}</span>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-light-info fw-bold">{{ expense.company.name }}</span></td>
+                        <td class="text-end fw-bold text-danger fs-6">${{ expense.amount }} {{ expense.currency.code|default:"" }}</td>
+                        <td class="text-center">
+                            {% if expense.status == 'APPROVED' %}
+                                <span class="badge badge-light-success fw-bold">Aprobado</span>
+                            {% elif expense.status == 'REJECTED' %}
+                                <span class="badge badge-light-danger fw-bold">Rechazado</span>
+                            {% else %}
+                                <span class="badge badge-light-warning fw-bold">En espera</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ expense.date_expense|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'sales:expense_edit' expense.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
+                                <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
+                            </a>
+                            <form id="delete-form-exp-{{ expense.id }}" action="{% url 'sales:expense_delete' expense.id %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" title="Eliminar" onclick="confirmDelete('delete-form-exp-{{ expense.id }}')">
+                                    <i class="ki-duotone ki-trash fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-10 text-muted">No hay gastos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MÓVIL -->
+        <div class="d-block d-md-none">
+            {% for expense in expenses %}
+            <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge badge-light-info fw-bold">{{ expense.company.name }}</span>
+                    <div>
+                        <a href="{% url 'sales:expense_edit' expense.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
+                            <i class="ki-duotone ki-pencil fs-4"><span class="path1"></span><span class="path2"></span></i>
+                        </a>
+                        <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" onclick="confirmDelete('delete-form-expm-{{ expense.id }}')">
+                            <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                        </button>
+                        <form id="delete-form-expm-{{ expense.id }}" action="{% url 'sales:expense_delete' expense.id %}" method="POST" class="d-none">
+                            {% csrf_token %}
+                        </form>
+                    </div>
+                </div>
+
+                <p class="text-gray-800 fw-semibold fs-7 mb-2">{{ expense.description }}</p>
+
+                <div class="d-flex justify-content-between align-items-center my-2">
+                    <span class="fw-bold text-danger fs-5">${{ expense.amount }}</span>
+                    <span class="badge badge-light-{{ expense.status|lower }} fw-bold">{{ expense.get_status_display }}</span>
+                </div>
+
+                <div class="separator separator-dashed my-2"></div>
+                <div class="text-muted fs-8">Fecha: {{ expense.date_expense|date:"d/m/Y H:i" }}</div>
+            </div>
+            {% empty %}
+            <div class="text-center py-10 text-muted">No hay gastos registrados.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmDelete(formId) {
+        Swal.fire({
+            text: "¿Estás seguro de eliminar este gasto?",
+            icon: "warning",
+            showCancelButton: true,
+            buttonsStyling: false,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            customClass: { confirmButton: "btn btn-danger btn-sm", cancelButton: "btn btn-active-light btn-sm" }
+        }).then(function (result) {
+            if (result.value) {
+                document.getElementById(formId).submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

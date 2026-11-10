@@ -357,7 +357,7 @@
 
                                     <!-- Ventas -->
                                     <div class="menu-item me-lg-2">
-                                        <a href="/ventas/"
+                                        <a href="{% url 'sales:sale_list' %}"
                                            class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
                                             <span class="menu-title">Ventas</span>
                                         </a>
@@ -367,6 +367,12 @@
                                         <a href="{% url 'sales:order_list' %}"
                                            class="menu-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}">
                                             <span class="menu-title">Pedidos</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'sales:expense_list' %}"
+                                           class="menu-link {% if '/ventas/gastos/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Gastos</span>
                                         </a>
                                     </div>
 
