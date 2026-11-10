@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
 from .models import AppUser, UserType
 from .forms import LoginForm
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 
 class CreateUserView(View):
     def get(self, request):

@@ -8,15 +8,19 @@ from apps.company.models import Company  # Assuming you have a Company model in 
 from apps.accounts.models import AppUser  # Assuming you have an AppUser model in the accounts app
 import random
 import string
-class CurrencyListView(LoginRequiredMixin, View):
+from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
+
+class CurrencyListView(BasePermissionMixin, View):
+    permission_required = 'catalog.view_currency'
+
     def get(self, request):
         currencies = Currency.objects.all()
         return render(request, 'catalog/currency/index.html', {'currencies': currencies})
 
 
+class CreateCurrencyView(BasePermissionMixin, View):
+    permission_required = 'catalog.add_currency'
 
-
-class CreateCurrencyView(LoginRequiredMixin, View):
     def get(self, request):
         return render(request, 'catalog/currency/create.html')
 
@@ -43,8 +47,9 @@ class CreateCurrencyView(LoginRequiredMixin, View):
             return render(request, 'catalog/currency/create.html', context)
 
 
+class UpdateCurrencyView(BasePermissionMixin, View):
+    permission_required = 'catalog.change_currency'
 
-class UpdateCurrencyView(LoginRequiredMixin, View):
     def get(self, request, currency_id):
         currency = get_object_or_404(Currency, id=currency_id)
         return render(request, 'catalog/currency/edit.html', {'currency': currency})
@@ -71,9 +76,9 @@ class UpdateCurrencyView(LoginRequiredMixin, View):
             return render(request, 'catalog/currency/edit.html', context)
 
 
+class DeleteCurrencyView(BasePermissionMixin, View):
+    permission_required = 'catalog.delete_currency'
 
-
-class DeleteCurrencyView(LoginRequiredMixin, View):
     def post(self, request, currency_id):
         currency = get_object_or_404(Currency, id=currency_id)
         try:
@@ -85,14 +90,17 @@ class DeleteCurrencyView(LoginRequiredMixin, View):
         return redirect('catalog:currency_list')
 
 
+class ProductCategoryListView(BasePermissionMixin, View):
+    permission_required = 'catalog.view_productcategory'
 
-
-class ProductCategoryListView(LoginRequiredMixin, View):
     def get(self, request):
         categories = ProductCategory.objects.all()
         return render(request, 'catalog/product_category/index.html', {'categories': categories})
 
-class CreateProductCategoryView(LoginRequiredMixin, View):
+
+class CreateProductCategoryView(BasePermissionMixin, View):
+    permission_required = 'catalog.add_productcategory'
+
     def get(self, request):
         return render(request, 'catalog/product_category/create.html')
 
@@ -118,7 +126,10 @@ class CreateProductCategoryView(LoginRequiredMixin, View):
             messages.error(request, f'Ocurrió un error al crear la categoría: {e}')
             return render(request, 'catalog/product_category/create.html', context)
 
-class UpdateProductCategoryView(LoginRequiredMixin, View):
+
+class UpdateProductCategoryView(BasePermissionMixin, View):
+    permission_required = 'catalog.change_productcategory'
+
     def get(self, request, category_id):
         category = get_object_or_404(ProductCategory, id=category_id)
         return render(request, 'catalog/product_category/edit.html', {'category': category})
@@ -144,7 +155,10 @@ class UpdateProductCategoryView(LoginRequiredMixin, View):
             messages.error(request, f'Ocurrió un error al actualizar: {e}')
             return render(request, 'catalog/product_category/edit.html', context)
 
-class DeleteProductCategoryView(LoginRequiredMixin, View):
+
+class DeleteProductCategoryView(BasePermissionMixin, View):
+    permission_required = 'catalog.delete_productcategory'
+
     def post(self, request, category_id):
         category = get_object_or_404(ProductCategory, id=category_id)
         try:
@@ -156,12 +170,12 @@ class DeleteProductCategoryView(LoginRequiredMixin, View):
         return redirect('catalog:category_list')
 
 
+class ProductListView(BasePermissionMixin, View):
+    permission_required = 'catalog.view_product'
 
-class ProductListView(LoginRequiredMixin, View):
     def get(self, request):
         products = Product.objects.select_related('category', 'currency', 'created_by').all()
         return render(request, 'catalog/product/index.html', {'products': products})
-
 
 
 def random_sku(company, length=8):
@@ -171,8 +185,9 @@ def random_sku(company, length=8):
     return f"{prefix}-{digits}"
 
 
+class CreateProductView(BasePermissionMixin, View):
+    permission_required = 'catalog.add_product'
 
-class CreateProductView(LoginRequiredMixin, View):
     def get(self, request):
         categories = ProductCategory.objects.all()
         currencies = Currency.objects.all()
@@ -240,7 +255,9 @@ class CreateProductView(LoginRequiredMixin, View):
             return render(request, 'catalog/product/create.html', context)
 
 
-class UpdateProductView(LoginRequiredMixin, View):
+class UpdateProductView(BasePermissionMixin, View):
+    permission_required = 'catalog.change_product'
+
     def get(self, request, product_id):
         product = get_object_or_404(Product, id=product_id)
         categories = ProductCategory.objects.all()
@@ -296,7 +313,9 @@ class UpdateProductView(LoginRequiredMixin, View):
             return render(request, 'catalog/product/edit.html', context)
 
 
-class DeleteProductView(LoginRequiredMixin, View):
+class DeleteProductView(BasePermissionMixin, View):
+    permission_required = 'catalog.delete_product'
+
     def post(self, request, product_id):
         product = get_object_or_404(Product, id=product_id)
         try:

@@ -6,18 +6,24 @@ from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
 from apps.accounts.models import AppUser
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from .mixins import BasePermissionMixin  # O heredar directamente de PermissionRequiredMixin
 
+class ListCompanyView(BasePermissionMixin, View):
+    permission_required = 'company.view_company'  
 
-class ListCompanyView(View):
     def get(self, request):
-        companies = Company.objects.all()
+        user = AppUser.objects.get(id=request.user.id)
+        companies = Company.objects.filter(owner=user)
         context = {
             'companies': companies
         }
         return render(request, 'company/index.html', context)
 
-class CreateCompanyView(LoginRequiredMixin, View):
+
+class CreateCompanyView(BasePermissionMixin, View):
+    permission_required = 'company.add_company'
+
     def get(self, request):
         # Obtenemos la lista de usuarios para los selectores de Propietario y Creador
         users = AppUser.objects.all()
@@ -71,8 +77,9 @@ class CreateCompanyView(LoginRequiredMixin, View):
             return render(request, 'company/create.html', context)
 
 
+class EditCompanyView(BasePermissionMixin, View):
+    permission_required = 'company.change_company'
 
-class EditCompanyView(LoginRequiredMixin, View):
     def get(self, request, pk):
         company_obj = get_object_or_404(Company, id=pk)
         users = AppUser.objects.all()
@@ -123,7 +130,9 @@ class EditCompanyView(LoginRequiredMixin, View):
             return render(request, 'company/edit.html', context)
 
 
-class DeleteCompanyView(LoginRequiredMixin, View):
+class DeleteCompanyView(BasePermissionMixin, View):
+    permission_required = 'company.delete_company'
+
     def post(self, request, company_id):
         company_obj = get_object_or_404(Company, id=company_id)
         

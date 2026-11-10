@@ -8,13 +8,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from .models import Combo, ComboItem, Product, Order, OrderItem, Currency, Sale, Expense
 from apps.company.models import Company
 from apps.accounts.models import AppUser
+from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
 
-class ComboListView(LoginRequiredMixin, View):
+class ComboListView(BasePermissionMixin, View):
+    permission_required = 'sales.view_combo'
+
     def get(self, request):
         combos = Combo.objects.select_related('company', 'created_by').prefetch_related('items__product').all()
         return render(request, 'sales/combo/index.html', {'combos': combos})
 
-class CreateComboView(LoginRequiredMixin, View):
+class CreateComboView(BasePermissionMixin, View):
+    permission_required = 'sales.add_combo'
+
     def get(self, request):
         companies = Company.objects.all()
         products = Product.objects.all()
@@ -73,7 +78,9 @@ class CreateComboView(LoginRequiredMixin, View):
             messages.error(request, f'Ocurrió un error al crear el combo: {e}')
             return render(request, 'sales/combo/create.html', context)
 
-class UpdateComboView(LoginRequiredMixin, View):
+class UpdateComboView(BasePermissionMixin, View):
+    permission_required = 'sales.change_combo'
+
     def get(self, request, combo_id):
         combo = get_object_or_404(Combo.objects.prefetch_related('items__product'), id=combo_id)
         companies = Company.objects.all()
@@ -122,7 +129,9 @@ class UpdateComboView(LoginRequiredMixin, View):
             messages.error(request, f'Error al actualizar el combo: {e}')
             return redirect('sales:combo_edit', combo_id=combo.id)
 
-class DeleteComboView(LoginRequiredMixin, View):
+class DeleteComboView(BasePermissionMixin, View):
+    permission_required = 'sales.delete_combo'
+
     def post(self, request, combo_id):
         combo = get_object_or_404(Combo, id=combo_id)
         try:
@@ -135,13 +144,17 @@ class DeleteComboView(LoginRequiredMixin, View):
 
 
 
-class OrderListView(LoginRequiredMixin, View):
+class OrderListView(BasePermissionMixin, View):
+    permission_required = 'sales.view_order'
+
     def get(self, request):
         orders = Order.objects.all()
         return render(request, 'sales/order/index.html', {'orders': orders})
 
 
-class CreateOrderView(LoginRequiredMixin, View):
+class CreateOrderView(BasePermissionMixin, View):
+    permission_required = 'sales.add_order'
+
     def get(self, request):
         customers = AppUser.objects.all()
         companies = Company.objects.all()
@@ -233,7 +246,9 @@ class CreateOrderView(LoginRequiredMixin, View):
             return render(request, 'sales/order/create.html', context)
 
 
-class UpdateOrderView(LoginRequiredMixin, View):
+class UpdateOrderView(BasePermissionMixin, View):
+    permission_required = 'sales.change_order'
+
     def get(self, request, order_id):
         order = get_object_or_404(Order.objects.prefetch_related('items__product', 'items__combo'), id=order_id)
         currencies = Currency.objects.all()
@@ -306,7 +321,9 @@ class UpdateOrderView(LoginRequiredMixin, View):
             return redirect('sales:order_edit', order_id=order.id)
 
 
-class DeleteOrderView(LoginRequiredMixin, View):
+class DeleteOrderView(BasePermissionMixin, View):
+    permission_required = 'sales.delete_order'
+
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
         try:
@@ -319,13 +336,17 @@ class DeleteOrderView(LoginRequiredMixin, View):
 
 
 
-class SaleListView(LoginRequiredMixin, View):
+class SaleListView(BasePermissionMixin, View):
+    permission_required = 'sales.view_sale'
+
     def get(self, request):
         sales = Sale.objects.select_related('order', 'created_by').all().order_by('-date_sale')
         return render(request, 'sales/sales/sale_list.html', {'sales': sales})
 
 
-class CreateSaleView(LoginRequiredMixin, View):
+class CreateSaleView(BasePermissionMixin, View):
+    permission_required = 'sales.add_sale'
+
     def get(self, request):
         # Solo mostramos órdenes que aún no tengan una venta asociada o todas las disponibles
         orders = Order.objects.filter(sales__isnull=True).order_by('-created_at')
@@ -372,7 +393,9 @@ class CreateSaleView(LoginRequiredMixin, View):
             return render(request, 'sales/sales/create.html', context)
 
 
-class UpdateSaleView(LoginRequiredMixin, View):
+class UpdateSaleView(BasePermissionMixin, View):
+    permission_required = 'sales.change_sale'
+
     def get(self, request, sale_id):
         sale = get_object_or_404(Sale, id=sale_id)
         orders = Order.objects.all()
@@ -407,7 +430,9 @@ class UpdateSaleView(LoginRequiredMixin, View):
             return redirect('sales:sale_edit', sale_id=sale.id)
 
 
-class DeleteSaleView(LoginRequiredMixin, View):
+class DeleteSaleView(BasePermissionMixin, View):
+    permission_required = 'sales.delete_sale'
+
     def post(self, request, sale_id):
         sale = get_object_or_404(Sale, id=sale_id)
         try:
@@ -419,13 +444,17 @@ class DeleteSaleView(LoginRequiredMixin, View):
         return redirect('sales:sale_list')
 
 
-class ExpenseListView(LoginRequiredMixin, View):
+class ExpenseListView(BasePermissionMixin, View):
+    permission_required = 'sales.view_expense'
+
     def get(self, request):
         expenses = Expense.objects.select_related('company', 'currency', 'created_by').all().order_by('-date_expense')
         return render(request, 'sales/expense/index.html', {'expenses': expenses})
 
 
-class CreateExpenseView(LoginRequiredMixin, View):
+class CreateExpenseView(BasePermissionMixin, View):
+    permission_required = 'sales.add_expense'
+
     def get(self, request):
         currencies = Currency.objects.all()
         context = {
@@ -474,7 +503,9 @@ class CreateExpenseView(LoginRequiredMixin, View):
             return render(request, 'sales/expense/create.html', context)
 
 
-class UpdateExpenseView(LoginRequiredMixin, View):
+class UpdateExpenseView(BasePermissionMixin, View):
+    permission_required = 'sales.change_expense'
+
     def get(self, request, expense_id):
         expense = get_object_or_404(Expense, id=expense_id)
         currencies = Currency.objects.all()
@@ -509,7 +540,9 @@ class UpdateExpenseView(LoginRequiredMixin, View):
             return redirect('sales:expense_edit', expense_id=expense.id)
 
 
-class DeleteExpenseView(LoginRequiredMixin, View):
+class DeleteExpenseView(BasePermissionMixin, View):
+    permission_required = 'sales.delete_expense'
+
     def post(self, request, expense_id):
         expense = get_object_or_404(Expense, id=expense_id)
         try:
