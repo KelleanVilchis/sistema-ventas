@@ -236,7 +236,6 @@ class CreateProductView(BasePermissionMixin, View):
         purchase_price = request.POST.get('purchase_price')
         sale_price = request.POST.get('sale_price')
         currency_id = request.POST.get('currency')
-        user = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
         categories = ProductCategory.objects.filter(company=company)
         currencies = Currency.objects.filter(company=company)
@@ -269,6 +268,7 @@ class CreateProductView(BasePermissionMixin, View):
                 name=name,
                 description=description,
                 company=company,
+                status=Product.Status.ACTIVE,
                 category=category_obj,
                 purchase_price=purchase_price,
                 sale_price=sale_price,
@@ -280,6 +280,23 @@ class CreateProductView(BasePermissionMixin, View):
         except Exception as e:
             messages.error(request, f'Ocurrió un error al registrar el producto: {e}')
             return render(request, 'catalog/product/create.html', context)
+
+
+class ProductToggleStatusView(BasePermissionMixin, View):
+    permission_required = "catalog.change_product"
+
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+
+        if product.status == Product.Status.ACTIVE:
+            product.status = Product.Status.INACTIVE
+            messages.success(request, f"Producto '{product.name}' dado de baja.")
+        else:
+            product.status = Product.Status.ACTIVE
+            messages.success(request, f"Producto '{product.name}' reactivado.")
+
+        product.save(update_fields=["status", "date_updated"])
+        return redirect("catalog:product_list")
 
 
 class UpdateProductView(BasePermissionMixin, View):
@@ -341,18 +358,3 @@ class UpdateProductView(BasePermissionMixin, View):
         except Exception as e:
             messages.error(request, f'Ocurrió un error al actualizar: {e}')
             return render(request, 'catalog/product/edit.html', context)
-
-
-class DeleteProductView(BasePermissionMixin, View):
-    permission_required = 'catalog.delete_product'
-
-    def post(self, request, product_id):
-        user = AppUser.objects.get(id=request.user.id)
-        product = get_object_or_404(Product, id=product_id, created_by=user)
-        try:
-            prod_name = product.name
-            product.delete()
-            messages.success(request, f'El producto "{prod_name}" fue eliminado correctamente.')
-        except Exception as e:
-            messages.error(request, 'No se pudo eliminar el producto. Podría estar asociado a transacciones activas.')
-        return redirect('catalog:product_list')

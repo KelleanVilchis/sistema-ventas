@@ -17,5 +17,6 @@ urlpatterns = [
     path('products/', views.ProductListView.as_view(), name='product_list'),
     path('products/create/', views.CreateProductView.as_view(), name='product_create'),
     path('products/edit/<int:product_id>/', views.UpdateProductView.as_view(), name='product_edit'),
-    path('products/delete/<int:product_id>/', views.DeleteProductView.as_view(), name='product_delete'),
+    # apps/catalog/urls.py
+    path("products/<int:pk>/toggle-status/",views.ProductToggleStatusView.as_view(),name="product_toggle_status"),
 ]

@@ -16,12 +16,18 @@ class Combo(models.Model):
 
 
     def purchase_price(self):
-        total_price = sum(item.product.purchase_price * item.quantity for item in self.items.all())
-        return total_price
+        return sum(
+            item.product.purchase_price * item.quantity
+            for item in self.items.all()
+            if item.product_id is not None
+        )
 
     def sale_price(self):
-        total_price = sum(item.product.sale_price * item.quantity for item in self.items.all())
-        return total_price
+        return sum(
+            item.product.sale_price * item.quantity
+            for item in self.items.all()
+            if item.product_id is not None
+        )
 
     def __str__(self):
         return self.name
