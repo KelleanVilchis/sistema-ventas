@@ -14,16 +14,16 @@ class ComboListView(BasePermissionMixin, View):
     permission_required = 'sales.view_combo'
 
     def get(self, request):
-        user = AppUser.objects.get(id=request.user.id)
-        combos = Combo.objects.select_related('company', 'created_by').prefetch_related('items__product').filter(created_by=user)
+        company = Company.objects.get(selected=True)
+        combos = Combo.objects.select_related('company', 'created_by').prefetch_related('items__product').filter(company=company)
         return render(request, 'sales/combo/index.html', {'combos': combos})
 
 class CreateComboView(BasePermissionMixin, View):
     permission_required = 'sales.add_combo'
 
     def get(self, request):
-        user = AppUser.objects.get(id=request.user.id)
-        products = Product.objects.filter(created_by=user)
+        company = Company.objects.get(selected=True)
+        products = Product.objects.filter(company=company)
         context = {
             'products': products
         }
@@ -33,8 +33,8 @@ class CreateComboView(BasePermissionMixin, View):
         name = request.POST.get('name')
         description = request.POST.get('description')
         owner = AppUser.objects.get(id=request.user.id) 
-        company = Company.objects.get(owner=owner)
-        products = Product.objects.all()
+        company = Company.objects.get(selected=True)
+        products = Product.objects.filter(company=company)
         context = {
             'name': name,
             'description': description,
@@ -81,8 +81,8 @@ class UpdateComboView(BasePermissionMixin, View):
 
     def get(self, request, combo_id):
         combo = get_object_or_404(Combo.objects.prefetch_related('items__product'), id=combo_id)
-        user = AppUser.objects.get(id=request.user.id)
-        products = Product.objects.filter(created_by=user)
+        company = Company.objects.get(selected=True)
+        products = Product.objects.filter(company=company)
         context = {
             'combo': combo,
             'products': products
@@ -130,8 +130,7 @@ class DeleteComboView(BasePermissionMixin, View):
     permission_required = 'sales.delete_combo'
 
     def post(self, request, combo_id):
-        user = AppUser.objects.get(id=request.user.id)
-        combo = get_object_or_404(Combo, id=combo_id, created_by=user)
+        combo = get_object_or_404(Combo, id=combo_id,company=Company.objects.get(selected=True))
         try:
             combo_name = combo.name
             combo.delete()
@@ -146,9 +145,8 @@ class OrderListView(BasePermissionMixin, View):
     permission_required = 'sales.view_order'
 
     def get(self, request):
-        user = AppUser.objects.get(id=request.user.id)
-        company = Company.objects.filter(owner=user)
-        orders = Order.objects.all()
+        company = Company.objects.get(selected=True)
+        orders = Order.objects.filter(company=company)
         return render(request, 'sales/order/index.html', {'orders': orders})
 
 
@@ -156,15 +154,12 @@ class CreateOrderView(BasePermissionMixin, View):
     permission_required = 'sales.add_order'
 
     def get(self, request):
-        user = AppUser.objects.get(id=request.user.id)
-        company = Company.objects.filter(owner=user)
-        companies = Company.objects.filter(owner=user)
-        currencies = Currency.objects.filter(created_by=user)
-        products = Product.objects.filter(created_by=user)
+        company = Company.objects.get(selected=True)
+        currencies = Currency.objects.filter(company=company)
+        products = Product.objects.filter(company=company)
         combos = Combo.objects.filter(company=company)
 
         context = {
-            'companies': companies,
             'currencies': currencies,
             'products': products,
             'combos': combos,
@@ -175,12 +170,11 @@ class CreateOrderView(BasePermissionMixin, View):
     def post(self, request):
         currency_id = request.POST.get('currency')
         status = request.POST.get('status', 'PENDING')
-        owner = AppUser.objects.get(id=request.user.id)  #   Assuming the logged-in user is the owner of the company
-        company = Company.objects.get(owner=owner)
+        company = Company.objects.get(selected=True)
         customer_name = request.POST.get('customer')
-        currencies = Currency.objects.all()
-        products = Product.objects.all()
-        combos = Combo.objects.all()
+        currencies = Currency.objects.filter(company=company)
+        products = Product.objects.filter(company=company)
+        combos = Combo.objects.filter(company=company)
 
         context = {
             'currencies': currencies,
@@ -251,10 +245,13 @@ class UpdateOrderView(BasePermissionMixin, View):
 
     def get(self, request, order_id):
         order = get_object_or_404(Order.objects.prefetch_related('items__product', 'items__combo'), id=order_id)
-        currencies = Currency.objects.all()
-        products = Product.objects.all()
-        combos = Combo.objects.all()
+        company = Company.objects.get(selected=True)
+        currencies = Currency.objects.filter(company=company)
+        products = Product.objects.filter(company=company)
+        combos = Combo.objects.filter(company=company)
 
+        if order.status == "COMPLETED":
+            return redirect('sales:order_list')
         context = {
             'order': order,
             'currencies': currencies,
@@ -266,12 +263,9 @@ class UpdateOrderView(BasePermissionMixin, View):
 
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
-        customer_id = request.POST.get('customer')
-        company_id = request.POST.get('company')
         currency_id = request.POST.get('currency')
         status = request.POST.get('status')
-        owner = AppUser.objects.get(id=request.user.id)  #   Assuming the logged-in user is the owner of the company
-        company = Company.objects.get(owner=owner)
+        company = Company.objects.get(selected=True)
         customer_name = request.POST.get('customer')
 
         try:
@@ -321,14 +315,35 @@ class UpdateOrderView(BasePermissionMixin, View):
             return redirect('sales:order_edit', order_id=order.id)
 
 
+
+class OrderCompleteView(BasePermissionMixin, View):
+    permission_required = "sales.change_order"
+
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        if order.status == "COMPLETED":
+            messages.info(request, f"El pedido {order.folio_number} ya estaba completado.")
+        elif order.status == "CANCELLED":
+            messages.warning(request, f"El pedido {order.folio_number} está cancelado y no se puede completar.")
+        else:
+            order.status = "COMPLETED"
+            order.save(update_fields=["status", "updated_at"])
+            messages.success(request, f"Pedido {order.folio_number} marcado como completado.")
+        return redirect("sales:order_list")
+
+
 class DeleteOrderView(BasePermissionMixin, View):
     permission_required = 'sales.delete_order'
 
     def post(self, request, order_id):
-        order = get_object_or_404(Order, id=order_id)
+        company = Company.objects.get(selected=True)
+        order = get_object_or_404(Order, id=order_id, company=company)
+        if order.status == "COMPLETED":
+            return redirect('sales:order_list')
         try:
             folio = order.folio_number
-            order.delete()
+            order.status = 'CANCELLED' 
+            order.save()
             messages.success(request, f'El pedido "{folio}" fue eliminado correctamente.')
         except Exception as e:
             messages.error(request, 'No se pudo eliminar el pedido.')
@@ -340,7 +355,7 @@ class SaleListView(BasePermissionMixin, View):
     permission_required = 'sales.view_sale'
 
     def get(self, request):
-        sales = Sale.objects.select_related('order', 'created_by').all().order_by('-date_sale')
+        sales = Sale.objects.select_related('order', 'created_by').filter().order_by('-date_sale')
         return render(request, 'sales/sales/sale_list.html', {'sales': sales})
 
 
@@ -349,7 +364,8 @@ class CreateSaleView(BasePermissionMixin, View):
 
     def get(self, request):
         # Solo mostramos órdenes que aún no tengan una venta asociada o todas las disponibles
-        orders = Order.objects.filter(sales__isnull=True).order_by('-created_at')
+        company = Company.objects.get(selected=True)
+        orders = Order.objects.filter(sales__isnull=True, company=company).order_by('-created_at')
         context = {
             'orders': orders,
             'status_choices': Sale.STATUS_CHOICES
@@ -361,7 +377,8 @@ class CreateSaleView(BasePermissionMixin, View):
         total_amount = request.POST.get('total_amount')
         date_sale = request.POST.get('date_sale')
 
-        orders = Order.objects.filter(sales__isnull=True).order_by('-created_at')
+        company = Company.objects.get(selected=True)
+        orders = Order.objects.filter(sales__isnull=True, company=company).order_by('-created_at')
         context = {
             'orders': orders,
             'status_choices': Sale.STATUS_CHOICES,
@@ -375,7 +392,7 @@ class CreateSaleView(BasePermissionMixin, View):
             return render(request, 'sales/sales/create.html', context)
 
         try:
-            order_obj = get_object_or_404(Order, id=order_id)
+            order_obj = get_object_or_404(Order, id=order_id, company=company)
             folio = f"SALE-{uuid.uuid4().hex[:8].upper()}"
 
             Sale.objects.create(
@@ -398,7 +415,8 @@ class UpdateSaleView(BasePermissionMixin, View):
 
     def get(self, request, sale_id):
         sale = get_object_or_404(Sale, id=sale_id)
-        orders = Order.objects.all()
+        company = Company.objects.get(selected=True)
+        orders = Order.objects.filter(company=company)
         context = {
             'sale': sale,
             'orders': orders,
@@ -434,7 +452,7 @@ class DeleteSaleView(BasePermissionMixin, View):
     permission_required = 'sales.delete_sale'
 
     def post(self, request, sale_id):
-        sale = get_object_or_404(Sale, id=sale_id)
+        sale = get_object_or_404(Sale, id=sale_id, company=Company.objects.get(selected=True))
         try:
             folio = sale.folio_number
             sale.delete()
@@ -448,7 +466,8 @@ class ExpenseListView(BasePermissionMixin, View):
     permission_required = 'sales.view_expense'
 
     def get(self, request):
-        expenses = Expense.objects.select_related('company', 'currency', 'created_by').all().order_by('-date_expense')
+        company = Company.objects.get(selected=True)
+        expenses = Expense.objects.select_related('company', 'currency', 'created_by').filter(company=company).order_by('-date_expense')
         return render(request, 'sales/expense/index.html', {'expenses': expenses})
 
 
@@ -456,7 +475,8 @@ class CreateExpenseView(BasePermissionMixin, View):
     permission_required = 'sales.add_expense'
 
     def get(self, request):
-        currencies = Currency.objects.all()
+        company = Company.objects.get(selected=True)
+        currencies = Currency.objects.filter(company=company)
         context = {
             'currencies': currencies,
             'status_choices': Expense.STATUS_CHOICES
@@ -468,10 +488,9 @@ class CreateExpenseView(BasePermissionMixin, View):
         currency_id = request.POST.get('currency')
         description = request.POST.get('description')
         status = request.POST.get('status', 'PENDING')
-        date_expense = request.POST.get('date_expense')
-        owner = AppUser.objects.get(id=request.user.id)  #   Assuming the logged-in user is the owner of the company
-        company = Company.objects.get(owner=owner)
-        currencies = Currency.objects.all()
+        date_expense = request.POST.get('date_expense')  #   Assuming the logged-in user is the owner of the company
+        company = Company.objects.get(selected=True)
+        currencies = Currency.objects.filter(company=company)
 
         context = {
             'amount': amount,
@@ -507,8 +526,9 @@ class UpdateExpenseView(BasePermissionMixin, View):
     permission_required = 'sales.change_expense'
 
     def get(self, request, expense_id):
+        company = Company.objects.get(selected=True)
         expense = get_object_or_404(Expense, id=expense_id)
-        currencies = Currency.objects.all()
+        currencies = Currency.objects.filter(company=company)
         context = {
             'expense': expense,
             'currencies': currencies,
@@ -544,7 +564,8 @@ class DeleteExpenseView(BasePermissionMixin, View):
     permission_required = 'sales.delete_expense'
 
     def post(self, request, expense_id):
-        expense = get_object_or_404(Expense, id=expense_id)
+        company = Company.objects.get(selected=True)
+        expense = get_object_or_404(Expense, id=expense_id, company=company)
         try:
             expense.delete()
             messages.success(request, 'El gasto fue eliminado correctamente.')

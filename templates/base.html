@@ -355,7 +355,21 @@
                                         </div>
                                     </div>
 
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'sales:combo_list' %}"
+                                           class="menu-link {% if 'combos/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Combos</span>
+                                        </a>
+                                    </div>
+
                                     <!-- Ventas -->
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'sales:order_list' %}"
+                                           class="menu-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Pedidos</span>
+                                        </a>
+                                    </div>
+                                    
                                     <div class="menu-item me-lg-2">
                                         <a href="{% url 'sales:sale_list' %}"
                                            class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
@@ -364,26 +378,12 @@
                                     </div>
 
                                     <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:order_list' %}"
-                                           class="menu-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Pedidos</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item me-lg-2">
                                         <a href="{% url 'sales:expense_list' %}"
                                            class="menu-link {% if '/ventas/gastos/' in request.path %}active{% endif %}">
                                             <span class="menu-title">Gastos</span>
                                         </a>
                                     </div>
 
-
-                                    <!-- Clientes -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:combo_list' %}"
-                                           class="menu-link {% if 'combos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Combos</span>
-                                        </a>
-                                    </div>
 
                                 </div>
                                 <!-- Fin opciones -->

@@ -86,6 +86,7 @@ class Sale(models.Model):
     folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='sales')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    company = models.ForeignKey(Company, on_delete=models.SET_NULL, related_name="sales", null=True)
     date_sale = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
