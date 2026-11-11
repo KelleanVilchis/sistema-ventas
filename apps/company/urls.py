@@ -7,4 +7,5 @@ urlpatterns = [
     path('create/', views.CreateCompanyView.as_view(), name='company_create'),
     path('edit/<int:pk>/', views.EditCompanyView.as_view(), name='company_edit'),
     path('delete/<int:company_id>/', views.DeleteCompanyView.as_view(), name='company_delete'),
+    path('toggle-status/<int:company_id>/', views.ToggleCompanyStatusView.as_view(), name='company_toggle_status'),
 ]

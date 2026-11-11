@@ -8,8 +8,11 @@ from django.contrib.auth import logout as auth_logout
 from .models import AppUser, UserType
 from .forms import LoginForm
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from apps.company.mixins import BasePermissionMixin
 
-class CreateUserView(View):
+class CreateUserView(BasePermissionMixin, View):
+    permission_required = 'accounts.add_appuser'
+
     def get(self, request):
         # Pasamos los tipos de usuario disponibles (ADM / EMP) para llenar el <select> en el HTML
         context = {
@@ -58,13 +61,17 @@ class CreateUserView(View):
             messages.error(request, f'Ocurrió un error al registrar el usuario: {e}')
             return render(request, 'accounts/register.html', context)
 
-class ListUsersView(View):
+class ListUsersView(BasePermissionMixin, View):
+    permission_required = 'accounts.view_appuser'
+
     def get(self, request):
         users = AppUser.objects.all()
         return render(request, 'accounts/index.html', {'users': users})
 
 
-class DeleteUserView(View):
+class DeleteUserView(BasePermissionMixin, View):
+    permission_required = 'accounts.delete_appuser'
+
     def post(self, request, user_id):
         user = get_object_or_404(AppUser, id=user_id)
         user.delete()
@@ -73,7 +80,9 @@ class DeleteUserView(View):
 
 
 
-class EditUserView(View):
+class EditUserView(BasePermissionMixin, View):
+    permission_required = 'accounts.change_appuser'
+
     def get(self, request, user_id):
         user_obj = get_object_or_404(AppUser, id=user_id)
         context = {

@@ -14,7 +14,8 @@ class CurrencyListView(BasePermissionMixin, View):
     permission_required = 'catalog.view_currency'
 
     def get(self, request):
-        currencies = Currency.objects.all()
+        company = Company.objects.get(selected=True)
+        currencies = Currency.objects.filter(company=company)
         return render(request, 'catalog/currency/index.html', {'currencies': currencies})
 
 
@@ -27,7 +28,7 @@ class CreateCurrencyView(BasePermissionMixin, View):
     def post(self, request):
         name = request.POST.get('name')
         code = request.POST.get('code')
-
+        company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
         context = {'name': name, 'code': code}
 
         if not name or not code:
@@ -38,6 +39,7 @@ class CreateCurrencyView(BasePermissionMixin, View):
             Currency.objects.create(
                 name=name,
                 code=code,
+                company=company,
                 created_by=request.user if request.user.is_authenticated else None
             )
             messages.success(request, 'Moneda creada exitosamente.')
@@ -51,11 +53,13 @@ class UpdateCurrencyView(BasePermissionMixin, View):
     permission_required = 'catalog.change_currency'
 
     def get(self, request, currency_id):
-        currency = get_object_or_404(Currency, id=currency_id)
+        user = AppUser.objects.get(id=request.user.id)
+        currency = get_object_or_404(Currency, id=currency_id, created_by=user)
         return render(request, 'catalog/currency/edit.html', {'currency': currency})
 
     def post(self, request, currency_id):
-        currency = get_object_or_404(Currency, id=currency_id)
+        user = AppUser.objects.get(id=request.user.id)
+        currency = get_object_or_404(Currency, id=currency_id, created_by=user)
         name = request.POST.get('name')
         code = request.POST.get('code')
 
@@ -80,7 +84,8 @@ class DeleteCurrencyView(BasePermissionMixin, View):
     permission_required = 'catalog.delete_currency'
 
     def post(self, request, currency_id):
-        currency = get_object_or_404(Currency, id=currency_id)
+        user = AppUser.objects.get(id=request.user.id)
+        currency = get_object_or_404(Currency, id=currency_id, created_by=user)
         try:
             currency_name = currency.name
             currency.delete()
@@ -94,7 +99,8 @@ class ProductCategoryListView(BasePermissionMixin, View):
     permission_required = 'catalog.view_productcategory'
 
     def get(self, request):
-        categories = ProductCategory.objects.all()
+        company = Company.objects.get(selected=True)
+        categories = ProductCategory.objects.filter(company=company)
         return render(request, 'catalog/product_category/index.html', {'categories': categories})
 
 
@@ -107,7 +113,7 @@ class CreateProductCategoryView(BasePermissionMixin, View):
     def post(self, request):
         name = request.POST.get('name')
         description = request.POST.get('description')
-
+        company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
         context = {'name': name, 'description': description}
 
         if not name:
@@ -118,6 +124,7 @@ class CreateProductCategoryView(BasePermissionMixin, View):
             ProductCategory.objects.create(
                 name=name,
                 description=description,
+                company=company,
                 created_by=request.user if request.user.is_authenticated else None
             )
             messages.success(request, 'Categoría creada exitosamente.')
@@ -131,11 +138,13 @@ class UpdateProductCategoryView(BasePermissionMixin, View):
     permission_required = 'catalog.change_productcategory'
 
     def get(self, request, category_id):
-        category = get_object_or_404(ProductCategory, id=category_id)
+        user = AppUser.objects.get(id=request.user.id)
+        category = get_object_or_404(ProductCategory, id=category_id, created_by=user)
         return render(request, 'catalog/product_category/edit.html', {'category': category})
 
     def post(self, request, category_id):
-        category = get_object_or_404(ProductCategory, id=category_id)
+        user = AppUser.objects.get(id=request.user.id)
+        category = get_object_or_404(ProductCategory, id=category_id, created_by=user)
         name = request.POST.get('name')
         description = request.POST.get('description')
 
@@ -160,7 +169,8 @@ class DeleteProductCategoryView(BasePermissionMixin, View):
     permission_required = 'catalog.delete_productcategory'
 
     def post(self, request, category_id):
-        category = get_object_or_404(ProductCategory, id=category_id)
+        user = AppUser.objects.get(id=request.user.id)
+        category = get_object_or_404(ProductCategory, id=category_id, created_by=user)
         try:
             category_name = category.name
             category.delete()
@@ -174,9 +184,26 @@ class ProductListView(BasePermissionMixin, View):
     permission_required = 'catalog.view_product'
 
     def get(self, request):
-        products = Product.objects.select_related('category', 'currency', 'created_by').all()
-        return render(request, 'catalog/product/index.html', {'products': products})
+        company = (
+            Company.objects
+            .filter(owner=request.user, selected=True)
+            .first()
+        )
 
+        if company is None:
+            messages.warning(
+                request,
+                "No tienes una empresa seleccionada. Selecciona una para continuar.",
+            )
+            return redirect("company:company_list")
+
+        products = Product.objects.filter(company=company).select_related("company")
+
+        return render(
+            request,
+            "catalog/product/index.html",
+            {"products": products, "company": company},
+        )
 
 def random_sku(company, length=8):
     company = Company.objects.get(id=company.id)
@@ -189,11 +216,10 @@ class CreateProductView(BasePermissionMixin, View):
     permission_required = 'catalog.add_product'
 
     def get(self, request):
-        categories = ProductCategory.objects.all()
-        currencies = Currency.objects.all()
-
         owner = AppUser.objects.get(id=request.user.id)  
-        company = Company.objects.get(owner=owner) 
+        company = Company.objects.get(selected=True, owner=owner)
+        categories = ProductCategory.objects.filter(company=company)
+        currencies = Currency.objects.filter(company=company)
         
         context = {
             'categories': categories,
@@ -210,10 +236,10 @@ class CreateProductView(BasePermissionMixin, View):
         purchase_price = request.POST.get('purchase_price')
         sale_price = request.POST.get('sale_price')
         currency_id = request.POST.get('currency')
-
-        categories = ProductCategory.objects.all()
-        currencies = Currency.objects.all()
-        
+        user = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
+        categories = ProductCategory.objects.filter(company=company)
+        currencies = Currency.objects.filter(company=company)
         context = {
             'sku': sku,
             'name': name,
@@ -242,6 +268,7 @@ class CreateProductView(BasePermissionMixin, View):
                 sku=sku,
                 name=name,
                 description=description,
+                company=company,
                 category=category_obj,
                 purchase_price=purchase_price,
                 sale_price=sale_price,
@@ -259,9 +286,10 @@ class UpdateProductView(BasePermissionMixin, View):
     permission_required = 'catalog.change_product'
 
     def get(self, request, product_id):
-        product = get_object_or_404(Product, id=product_id)
-        categories = ProductCategory.objects.all()
-        currencies = Currency.objects.all()
+        user = AppUser.objects.get(id=request.user.id)
+        product = get_object_or_404(Product, id=product_id, created_by=user)
+        categories = ProductCategory.objects.filter(created_by=user)
+        currencies = Currency.objects.filter(created_by=user)
         context = {
             'product': product,
             'categories': categories,
@@ -270,7 +298,8 @@ class UpdateProductView(BasePermissionMixin, View):
         return render(request, 'catalog/product/edit.html', context)
 
     def post(self, request, product_id):
-        product = get_object_or_404(Product, id=product_id)
+        user = AppUser.objects.get(id=request.user.id)
+        product = get_object_or_404(Product, id=product_id, created_by=user)
         sku = request.POST.get('sku')
         name = request.POST.get('name')
         description = request.POST.get('description')
@@ -279,8 +308,9 @@ class UpdateProductView(BasePermissionMixin, View):
         sale_price = request.POST.get('sale_price')
         currency_id = request.POST.get('currency')
 
-        categories = ProductCategory.objects.all()
-        currencies = Currency.objects.all()
+        company = Company.objects.get(selected=True)
+        categories = ProductCategory.objects.filter(company=company)
+        currencies = Currency.objects.filter(company=company)
 
         context = {
             'product': product,
@@ -300,10 +330,10 @@ class UpdateProductView(BasePermissionMixin, View):
             product.sku = sku
             product.name = name
             product.description = description
-            product.category = ProductCategory.objects.filter(id=category_id).first() if category_id else None
+            product.category = ProductCategory.objects.filter(id=category_id, created_by=user).first() if category_id else None
             product.purchase_price = purchase_price
             product.sale_price = sale_price
-            product.currency = Currency.objects.filter(id=currency_id).first() if currency_id else None
+            product.currency = Currency.objects.filter(id=currency_id, created_by=user).first() if currency_id else None
             product.save()
 
             messages.success(request, 'Producto actualizado exitosamente.')
@@ -317,7 +347,8 @@ class DeleteProductView(BasePermissionMixin, View):
     permission_required = 'catalog.delete_product'
 
     def post(self, request, product_id):
-        product = get_object_or_404(Product, id=product_id)
+        user = AppUser.objects.get(id=request.user.id)
+        product = get_object_or_404(Product, id=product_id, created_by=user)
         try:
             prod_name = product.name
             product.delete()

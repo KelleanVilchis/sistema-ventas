@@ -53,25 +53,10 @@
 
             <!-- Fila: Dirección -->
             <div class="row mb-6">
-                <div class="col-lg-12 fv-row">
+                <div class="col-lg-6 fv-row">
                     <label class="form-label required fw-semibold fs-6">Dirección</label>
                     <input type="text" name="address" value="{{ company.address }}" class="form-control form-control-solid bg-transparent" required />
                 </div>
-            </div>
-
-            <!-- Fila: Propietario y Estado (Selected) -->
-            <div class="row mb-6">
-                <div class="col-lg-6 fv-row">
-                    <label class="form-label required fw-semibold fs-6">Propietario</label>
-                    <select name="owner" class="form-select form-select-solid bg-transparent" required>
-                        {% for user in users %}
-                            <option value="{{ user.id }}" {% if company.owner.id == user.id %}selected{% endif %}>
-                                {{ user.get_full_name|default:user.email }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
                 <div class="col-lg-6 fv-row d-flex align-items-center mt-8">
                     <div class="form-check form-check-custom form-check-solid">
                         <input class="form-check-input" type="checkbox" name="selected" id="selected" {% if company.selected %}checked{% endif %} />
@@ -81,7 +66,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Fila: Descripción -->
             <div class="row mb-6">
                 <div class="col-lg-12 fv-row">

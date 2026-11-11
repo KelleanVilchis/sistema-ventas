@@ -25,7 +25,7 @@ class CreateCompanyView(BasePermissionMixin, View):
     permission_required = 'company.add_company'
 
     def get(self, request):
-        # Obtenemos la lista de usuarios para los selectores de Propietario y Creador
+
         users = AppUser.objects.all()
         context = {
             'users': users
@@ -38,7 +38,7 @@ class CreateCompanyView(BasePermissionMixin, View):
         phone = request.POST.get('phone')
         description = request.POST.get('description')
         selected = True if request.POST.get('selected') == 'on' else False
-        owner_id = request.POST.get('owner')
+        owner = AppUser.objects.get(id=request.user.id)  # Asignamos el usuario actual como propietario
 
         users = AppUser.objects.all()
         context = {
@@ -51,13 +51,11 @@ class CreateCompanyView(BasePermissionMixin, View):
         }
 
         # Validación básica
-        if not name or not address or not phone or not owner_id:
+        if not name or not address or not phone:
             messages.error(request, 'Por favor, completa todos los campos obligatorios.')
             return render(request, 'company/create.html', context)
 
         try:
-            owner_obj = AppUser.objects.get(id=owner_id)
-            
             # Creamos la compañía vinculando al usuario como propietario y el usuario actual como creador
             Company.objects.create(
                 name=name,
@@ -65,7 +63,7 @@ class CreateCompanyView(BasePermissionMixin, View):
                 phone=phone,
                 description=description,
                 selected=selected,
-                owner=owner_obj,
+                owner=owner,
                 created_by=request.user if request.user.is_authenticated else None
             )
 
@@ -82,11 +80,12 @@ class EditCompanyView(BasePermissionMixin, View):
 
     def get(self, request, pk):
         company_obj = get_object_or_404(Company, id=pk)
-        users = AppUser.objects.all()
-        
+        user = AppUser.objects.get(id=request.user.id)
+        if company_obj.owner != user:
+            messages.error(request, 'No tienes permiso para editar esta compañía.')
+            return redirect('company:company_index')
         context = {
             'company': company_obj,
-            'users': users
         }
         return render(request, 'company/edit.html', context)
 
@@ -98,28 +97,21 @@ class EditCompanyView(BasePermissionMixin, View):
         phone = request.POST.get('phone')
         description = request.POST.get('description')
         selected = True if request.POST.get('selected') == 'on' else False
-        owner_id = request.POST.get('owner')
-
-        users = AppUser.objects.all()
         context = {
-            'company': company_obj,
-            'users': users
+            'company': company_obj
         }
 
         # Validación básica
-        if not name or not address or not phone or not owner_id:
+        if not name or not address or not phone :
             messages.error(request, 'Por favor, completa los campos obligatorios.')
             return render(request, 'company/edit.html', context)
 
-        try:
-            owner_obj = AppUser.objects.get(id=owner_id)
-            
+        try:         
             company_obj.name = name
             company_obj.address = address
             company_obj.phone = phone
             company_obj.description = description
             company_obj.selected = selected
-            company_obj.owner = owner_obj
             company_obj.save()
 
             messages.success(request, 'Compañía actualizada exitosamente.')
@@ -135,7 +127,10 @@ class DeleteCompanyView(BasePermissionMixin, View):
 
     def post(self, request, company_id):
         company_obj = get_object_or_404(Company, id=company_id)
-        
+        user = AppUser.objects.get(id=request.user.id)
+        if company_obj.owner != user:
+            messages.error(request, 'No tienes permiso para eliminar esta compañía.')
+            return redirect('company:company_index')
         try:
             company_name = company_obj.name
             company_obj.delete()
@@ -145,3 +140,13 @@ class DeleteCompanyView(BasePermissionMixin, View):
         return redirect('company:company_index')
 
 
+class ToggleCompanyStatusView(BasePermissionMixin, View):
+    permission_required = 'company.change_company'
+
+    def post(self, request, company_id):
+        company_obj = get_object_or_404(Company, id=company_id)
+        company_obj.selected = not company_obj.selected
+        company_obj.save()
+        status_text = "activada" if company_obj.selected else "desactivada"
+        messages.success(request, f'La compañía "{company_obj.name}" ha sido {status_text} correctamente.')
+        return redirect('company:company_index')

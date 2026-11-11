@@ -14,17 +14,17 @@ class ComboListView(BasePermissionMixin, View):
     permission_required = 'sales.view_combo'
 
     def get(self, request):
-        combos = Combo.objects.select_related('company', 'created_by').prefetch_related('items__product').all()
+        user = AppUser.objects.get(id=request.user.id)
+        combos = Combo.objects.select_related('company', 'created_by').prefetch_related('items__product').filter(created_by=user)
         return render(request, 'sales/combo/index.html', {'combos': combos})
 
 class CreateComboView(BasePermissionMixin, View):
     permission_required = 'sales.add_combo'
 
     def get(self, request):
-        companies = Company.objects.all()
-        products = Product.objects.all()
+        user = AppUser.objects.get(id=request.user.id)
+        products = Product.objects.filter(created_by=user)
         context = {
-            'companies': companies,
             'products': products
         }
         return render(request, 'sales/combo/create.html', context)
@@ -34,12 +34,10 @@ class CreateComboView(BasePermissionMixin, View):
         description = request.POST.get('description')
         owner = AppUser.objects.get(id=request.user.id) 
         company = Company.objects.get(owner=owner)
-        companies = Company.objects.all()
         products = Product.objects.all()
         context = {
             'name': name,
             'description': description,
-            'companies': companies,
             'products': products
         }
 
@@ -83,11 +81,10 @@ class UpdateComboView(BasePermissionMixin, View):
 
     def get(self, request, combo_id):
         combo = get_object_or_404(Combo.objects.prefetch_related('items__product'), id=combo_id)
-        companies = Company.objects.all()
-        products = Product.objects.all()
+        user = AppUser.objects.get(id=request.user.id)
+        products = Product.objects.filter(created_by=user)
         context = {
             'combo': combo,
-            'companies': companies,
             'products': products
         }
         return render(request, 'sales/combo/edit.html', context)
@@ -133,7 +130,8 @@ class DeleteComboView(BasePermissionMixin, View):
     permission_required = 'sales.delete_combo'
 
     def post(self, request, combo_id):
-        combo = get_object_or_404(Combo, id=combo_id)
+        user = AppUser.objects.get(id=request.user.id)
+        combo = get_object_or_404(Combo, id=combo_id, created_by=user)
         try:
             combo_name = combo.name
             combo.delete()
@@ -148,6 +146,8 @@ class OrderListView(BasePermissionMixin, View):
     permission_required = 'sales.view_order'
 
     def get(self, request):
+        user = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.filter(owner=user)
         orders = Order.objects.all()
         return render(request, 'sales/order/index.html', {'orders': orders})
 
@@ -156,14 +156,14 @@ class CreateOrderView(BasePermissionMixin, View):
     permission_required = 'sales.add_order'
 
     def get(self, request):
-        customers = AppUser.objects.all()
-        companies = Company.objects.all()
-        currencies = Currency.objects.all()
-        products = Product.objects.all()
-        combos = Combo.objects.all()
+        user = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.filter(owner=user)
+        companies = Company.objects.filter(owner=user)
+        currencies = Currency.objects.filter(created_by=user)
+        products = Product.objects.filter(created_by=user)
+        combos = Combo.objects.filter(company=company)
 
         context = {
-            'customers': customers,
             'companies': companies,
             'currencies': currencies,
             'products': products,
