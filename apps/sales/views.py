@@ -1,5 +1,5 @@
 import uuid
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Count
 from django.db import transaction
 from django.http import request
 from django.shortcuts import render, redirect, get_object_or_404
@@ -351,7 +351,8 @@ class OrderSellView(BasePermissionMixin, View):
 
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk)
-
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
         if order.status != "COMPLETED":
             messages.error(
                 request,
@@ -372,6 +373,7 @@ class OrderSellView(BasePermissionMixin, View):
                     order=order,
                     total_amount=order.total_amount,
                     date_sale=timezone.now(),
+                    company=company,
                     created_by=request.user,
                 )
             messages.success(
@@ -408,8 +410,38 @@ class SaleListView(BasePermissionMixin, View):
     permission_required = 'sales.view_sale'
 
     def get(self, request):
-        sales = Sale.objects.select_related('order', 'created_by').filter().order_by('-date_sale')
-        return render(request, 'sales/sales/sale_list.html', {'sales': sales})
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        status_filter = request.GET.get('status', 'ALL')
+
+        sales_qs = (
+            Sale.objects
+            .select_related('order', 'created_by')
+            .filter(company=company)
+            .order_by('-date_sale')
+        )
+
+        if status_filter in ('SOLD', 'RETURNED', 'CANCELLED', 'PENDING'):
+            sales_qs = sales_qs.filter(status=status_filter)
+        else:
+            status_filter = 'ALL'
+
+        # Conteos para los badges de los filtros (solo de esta empresa)
+        counts_qs = (
+            Sale.objects
+            .filter(company=company)
+            .values('status')
+            .annotate(n=Count('id'))
+        )
+        counts = {row['status']: row['n'] for row in counts_qs}
+        counts['ALL'] = sum(counts.values()) if counts else 0
+
+        return render(request, 'sales/sales/sale_list.html', {
+            'sales': sales_qs,
+            'status_filter': status_filter,
+            'counts': counts,
+        })
 
 
 class CreateSaleView(BasePermissionMixin, View):
@@ -454,6 +486,7 @@ class CreateSaleView(BasePermissionMixin, View):
                 folio_number=folio,
                 order=order_obj,
                 total_amount=total_amount,
+                company=company,
                 date_sale=date_sale if date_sale else timezone.now(),
                 created_by=request.user if request.user.is_authenticated else None
             )
