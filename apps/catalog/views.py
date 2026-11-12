@@ -14,7 +14,8 @@ class CurrencyListView(BasePermissionMixin, View):
     permission_required = 'catalog.view_currency'
 
     def get(self, request):
-        company = Company.objects.get(selected=True)
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
         currencies = Currency.objects.filter(company=company)
         return render(request, 'catalog/currency/index.html', {'currencies': currencies})
 
@@ -28,7 +29,8 @@ class CreateCurrencyView(BasePermissionMixin, View):
     def post(self, request):
         name = request.POST.get('name')
         code = request.POST.get('code')
-        company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)  # Assuming the user is the owner of the company
         context = {'name': name, 'code': code}
 
         if not name or not code:
@@ -99,7 +101,8 @@ class ProductCategoryListView(BasePermissionMixin, View):
     permission_required = 'catalog.view_productcategory'
 
     def get(self, request):
-        company = Company.objects.get(selected=True)
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
         categories = ProductCategory.objects.filter(company=company)
         return render(request, 'catalog/product_category/index.html', {'categories': categories})
 
@@ -113,7 +116,8 @@ class CreateProductCategoryView(BasePermissionMixin, View):
     def post(self, request):
         name = request.POST.get('name')
         description = request.POST.get('description')
-        company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner) # Assuming the user is the owner of the company
         context = {'name': name, 'description': description}
 
         if not name:
@@ -184,18 +188,15 @@ class ProductListView(BasePermissionMixin, View):
     permission_required = 'catalog.view_product'
 
     def get(self, request):
-        company = (
-            Company.objects
-            .filter(owner=request.user, selected=True)
-            .first()
-        )
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
 
         if company is None:
             messages.warning(
                 request,
                 "No tienes una empresa seleccionada. Selecciona una para continuar.",
             )
-            return redirect("company:company_list")
+            return redirect("company:company_index")
 
         products = Product.objects.filter(company=company).select_related("company")
 
@@ -236,7 +237,8 @@ class CreateProductView(BasePermissionMixin, View):
         purchase_price = request.POST.get('purchase_price')
         sale_price = request.POST.get('sale_price')
         currency_id = request.POST.get('currency')
-        company = Company.objects.get(selected=True)  # Assuming the user is the owner of the company
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner) # Assuming the user is the owner of the company
         categories = ProductCategory.objects.filter(company=company)
         currencies = Currency.objects.filter(company=company)
         context = {

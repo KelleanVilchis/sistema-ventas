@@ -1,4 +1,6 @@
-from django.db import models
+from django.db import models, transaction
+from django.db.models import Q, UniqueConstraint
+
 from apps.accounts.models import AppUser
 
 
@@ -13,5 +15,19 @@ class Company(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["owner"],
+                condition=Q(selected=True),
+                name="unique_selected_company_per_owner",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            if self.selected and self.owner_id:
+                Company.objects.filter(
+                    owner_id=self.owner_id, selected=True
+                ).exclude(pk=self.pk).update(selected=False)
+            super().save(*args, **kwargs)
