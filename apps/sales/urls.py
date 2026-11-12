@@ -13,6 +13,8 @@ urlpatterns = [
     path('orders/edit/<int:order_id>/', views.UpdateOrderView.as_view(), name='order_edit'),
     path('orders/delete/<int:order_id>/', views.DeleteOrderView.as_view(), name='order_delete'),
     path("orders/<int:pk>/complete/", views.OrderCompleteView.as_view(), name="order_complete"),
+    # apps/sales/urls.py
+    path("orders/<int:pk>/sell/",views.OrderSellView.as_view(),name="order_sell",),
 
     path('sales/', views.SaleListView.as_view(), name='sale_list'),
     path('sales/create/', views.CreateSaleView.as_view(), name='sale_create'),

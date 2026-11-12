@@ -70,24 +70,52 @@
                         <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
                         <td class="text-end">
 
-                            {# ─── Botón Completar (bloqueado si COMPLETED o CANCELLED) ─── #}
-                            {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
-                                <span class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1 disabled"
-                                      title="No se puede completar un pedido {% if order.status == 'COMPLETED' %}completado{% else %}cancelado{% endif %}"
-                                      aria-disabled="true"
-                                      style="pointer-events: none; opacity: .55;">
-                                    <i class="ki-duotone ki-check-circle fs-3"><span class="path1"></span><span class="path2"></span></i>
-                                </span>
-                            {% else %}
+                            {# ─── PENDING / ACCEPTED: Completar ─── #}
+                            {% if order.status == 'PENDING' or order.status == 'ACCEPTED' %}
                                 <form id="complete-form-ord-{{ order.id }}" action="{% url 'sales:order_complete' order.id %}" method="POST" class="d-inline">
                                     {% csrf_token %}
-                                    <button type="button" class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1" title="Marcar como completado" onclick="confirmComplete('complete-form-ord-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
+                                    <button type="button" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                            title="Completar pedido"
+                                            onclick="confirmComplete('complete-form-ord-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
                                         <i class="ki-duotone ki-check-circle fs-3"><span class="path1"></span><span class="path2"></span></i>
                                     </button>
                                 </form>
+
+                            {# ─── COMPLETED sin venta: botón Vender ACTIVO (ícono verde) ─── #}
+                            {% elif order.status == 'COMPLETED' and not order.is_sold %}
+                                <form id="sell-form-ord-{{ order.id }}" action="{% url 'sales:order_sell' order.id %}" method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="button" class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1 text-success"
+                                            title="Registrar venta"
+                                            onclick="confirmSell('sell-form-ord-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}', '{{ order.total_amount }}')">
+                                        <i class="ki-duotone ki-dollar fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                                    </button>
+                                </form>
+
+                            {# ─── COMPLETED con venta: DESHABILITADO (igual que edit) ─── #}
+                            {% elif order.status == 'COMPLETED' and order.is_sold %}
+                                <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
+                                      title="Pedido ya vendido — no se puede volver a vender"
+                                      aria-disabled="true"
+                                      style="pointer-events: none; opacity: .55;">
+                                    <i class="ki-duotone ki-dollar fs-3 text-muted">
+                                        <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                                    </i>
+                                </span>
+
+                            {# ─── CANCELLED: deshabilitado ─── #}
+                            {% else %}
+                                <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
+                                      title="Pedido cancelado"
+                                      aria-disabled="true"
+                                      style="pointer-events: none; opacity: .55;">
+                                    <i class="ki-duotone ki-check-circle fs-3 text-muted">
+                                        <span class="path1"></span><span class="path2"></span>
+                                    </i>
+                                </span>
                             {% endif %}
 
-                            {# ─── Botón Editar (bloqueado si COMPLETED o CANCELLED) ─── #}
+                            {# ─── Editar (bloqueado si COMPLETED o CANCELLED) ─── #}
                             {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
                                 <span class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 disabled"
                                       title="No se puede editar un pedido {% if order.status == 'COMPLETED' %}completado{% else %}cancelado{% endif %}"
@@ -101,7 +129,7 @@
                                 </a>
                             {% endif %}
 
-                            {# ─── Botón Eliminar (bloqueado si COMPLETED o CANCELLED) ─── #}
+                            {# ─── Cancelar (bloqueado si COMPLETED o CANCELLED) ─── #}
                             {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
                                 <span class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm disabled"
                                       title="No se puede cancelar un pedido {% if order.status == 'COMPLETED' %}completado{% else %}cancelado{% endif %}"
@@ -112,7 +140,9 @@
                             {% else %}
                                 <form id="delete-form-ord-{{ order.id }}" action="{% url 'sales:order_delete' order.id %}" method="POST" class="d-inline">
                                     {% csrf_token %}
-                                    <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" title="Cancelar" onclick="confirmDelete('delete-form-ord-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
+                                    <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm"
+                                            title="Cancelar"
+                                            onclick="confirmDelete('delete-form-ord-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
                                         <i class="ki-duotone ki-trash fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
                                     </button>
                                 </form>
@@ -134,21 +164,49 @@
                     <span class="badge badge-light-dark fw-bold fs-7">{{ order.folio_number|default:order.id }}</span>
                     <div>
 
-                        {# ─── Completar (bloqueado si COMPLETED o CANCELLED) ─── #}
-                        {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
-                            <span class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1 disabled"
-                                  title="No se puede completar un pedido {% if order.status == 'COMPLETED' %}completado{% else %}cancelado{% endif %}"
-                                  aria-disabled="true"
-                                  style="pointer-events: none; opacity: .55;">
-                                <i class="ki-duotone ki-check-circle fs-4"><span class="path1"></span><span class="path2"></span></i>
-                            </span>
-                        {% else %}
-                            <button type="button" class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1" title="Marcar como completado" onclick="confirmComplete('complete-form-ordm-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
+                        {# ─── PENDING / ACCEPTED: Completar ─── #}
+                        {% if order.status == 'PENDING' or order.status == 'ACCEPTED' %}
+                            <button type="button" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1"
+                                    title="Completar pedido"
+                                    onclick="confirmComplete('complete-form-ordm-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
                                 <i class="ki-duotone ki-check-circle fs-4"><span class="path1"></span><span class="path2"></span></i>
                             </button>
                             <form id="complete-form-ordm-{{ order.id }}" action="{% url 'sales:order_complete' order.id %}" method="POST" class="d-none">
                                 {% csrf_token %}
                             </form>
+
+                        {# ─── COMPLETED sin venta: Vender ACTIVO (ícono verde) ─── #}
+                        {% elif order.status == 'COMPLETED' and not order.is_sold %}
+                            <button type="button" class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1 text-success"
+                                    title="Registrar venta"
+                                    onclick="confirmSell('sell-form-ordm-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}', '{{ order.total_amount }}')">
+                                <i class="ki-duotone ki-dollar fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                            </button>
+                            <form id="sell-form-ordm-{{ order.id }}" action="{% url 'sales:order_sell' order.id %}" method="POST" class="d-none">
+                                {% csrf_token %}
+                            </form>
+
+                        {# ─── COMPLETED con venta: DESHABILITADO ─── #}
+                        {% elif order.status == 'COMPLETED' and order.is_sold %}
+                            <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
+                                  title="Pedido ya vendido — no se puede volver a vender"
+                                  aria-disabled="true"
+                                  style="pointer-events: none; opacity: .55;">
+                                <i class="ki-duotone ki-dollar fs-4 text-muted">
+                                    <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                                </i>
+                            </span>
+
+                        {# ─── CANCELLED: deshabilitado ─── #}
+                        {% else %}
+                            <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
+                                  title="Pedido cancelado"
+                                  aria-disabled="true"
+                                  style="pointer-events: none; opacity: .55;">
+                                <i class="ki-duotone ki-check-circle fs-4 text-muted">
+                                    <span class="path1"></span><span class="path2"></span>
+                                </i>
+                            </span>
                         {% endif %}
 
                         {# ─── Editar (bloqueado si COMPLETED o CANCELLED) ─── #}
@@ -165,7 +223,7 @@
                             </a>
                         {% endif %}
 
-                        {# ─── Eliminar (bloqueado si COMPLETED o CANCELLED) ─── #}
+                        {# ─── Cancelar (bloqueado si COMPLETED o CANCELLED) ─── #}
                         {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
                             <span class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm disabled"
                                   title="No se puede cancelar un pedido {% if order.status == 'COMPLETED' %}completado{% else %}cancelado{% endif %}"
@@ -174,7 +232,8 @@
                                 <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
                             </span>
                         {% else %}
-                            <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm" onclick="confirmDelete('delete-form-ordm-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
+                            <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm"
+                                    onclick="confirmDelete('delete-form-ordm-{{ order.id }}', '{{ order.folio_number|default:order.id|escapejs }}')">
                                 <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
                             </button>
                             <form id="delete-form-ordm-{{ order.id }}" action="{% url 'sales:order_delete' order.id %}" method="POST" class="d-none">
@@ -227,6 +286,29 @@
             confirmButtonText: "Sí, completar",
             cancelButtonText: "Cancelar",
             customClass: { confirmButton: "btn btn-success btn-sm", cancelButton: "btn btn-active-light btn-sm" }
+        }).then(function (result) {
+            if (result.value) {
+                document.getElementById(formId).submit();
+            }
+        });
+    }
+
+    function confirmSell(formId, folio, total) {
+        Swal.fire({
+            html:
+                "<div class='text-start'>" +
+                "<p class='mb-2'>Vas a registrar la venta del pedido <strong>" + folio + "</strong> por <strong>$" + total + "</strong>.</p>" +
+                "<p class='text-muted fs-7 mb-0'>Se creará el registro de venta y no podrás volver a venderlo.</p>" +
+                "</div>",
+            icon: "warning",
+            showCancelButton: true,
+            buttonsStyling: false,
+            confirmButtonText: "Sí, registrar venta",
+            cancelButtonText: "Cancelar",
+            customClass: {
+                confirmButton: "btn btn-success btn-sm",
+                cancelButton: "btn btn-active-light btn-sm"
+            }
         }).then(function (result) {
             if (result.value) {
                 document.getElementById(formId).submit();

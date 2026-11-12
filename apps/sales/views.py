@@ -1,4 +1,6 @@
 import uuid
+from django.db.models import Exists, OuterRef
+from django.db import transaction
 from django.http import request
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -147,13 +149,14 @@ class DeleteComboView(BasePermissionMixin, View):
 
 
 class OrderListView(BasePermissionMixin, View):
-    permission_required = 'sales.view_order'
+    permission_required = "sales.view_order"
 
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        orders = Order.objects.filter(company=company)
-        return render(request, 'sales/order/index.html', {'orders': orders})
+        sold_sales = Sale.objects.filter(order=OuterRef("pk"),status="SOLD")
+        orders = (Order.objects.filter(company=company).select_related("company", "currency").annotate(is_sold=Exists(sold_sales)))
+        return render(request, "sales/order/index.html", {"orders": orders})
 
 
 class CreateOrderView(BasePermissionMixin, View):
@@ -339,6 +342,45 @@ class OrderCompleteView(BasePermissionMixin, View):
             order.status = "COMPLETED"
             order.save(update_fields=["status", "updated_at"])
             messages.success(request, f"Pedido {order.folio_number} marcado como completado.")
+        return redirect("sales:order_list")
+
+
+
+class OrderSellView(BasePermissionMixin, View):
+    permission_required = "sales.add_sale"
+
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+
+        if order.status != "COMPLETED":
+            messages.error(
+                request,
+                f"El pedido {order.folio_number} debe completarse antes de venderse.",
+            )
+            return redirect("sales:order_list")
+
+        if order.sales.exists():
+            messages.info(
+                request,
+                f"El pedido {order.folio_number} ya tiene una venta registrada.",
+            )
+            return redirect("sales:order_list")
+
+        try:
+            with transaction.atomic():
+                Sale.objects.create(
+                    order=order,
+                    total_amount=order.total_amount,
+                    date_sale=timezone.now(),
+                    created_by=request.user,
+                )
+            messages.success(
+                request,
+                f"Venta registrada para el pedido {order.folio_number}.",
+            )
+        except Exception as e:
+            messages.error(request, f"No se pudo registrar la venta: {e}")
+
         return redirect("sales:order_list")
 
 

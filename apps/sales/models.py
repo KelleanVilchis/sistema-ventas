@@ -1,4 +1,6 @@
+import uuid
 from django.db import models
+from django.utils import timezone
 from apps.accounts.models import AppUser
 from apps.catalog.models import Product, Currency
 from apps.company.models import Company
@@ -92,6 +94,7 @@ class Sale(models.Model):
     folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='sales')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10,choices=STATUS_CHOICES,default="SOLD",db_index=True)
     company = models.ForeignKey(Company, on_delete=models.SET_NULL, related_name="sales", null=True)
     date_sale = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -100,6 +103,20 @@ class Sale(models.Model):
 
     def __str__(self):
         return f"Sale {self.id} - Order {self.order.id}"
+
+    def save(self, *args, **kwargs):
+        if not self.folio_number:
+            self.folio_number = self._generate_folio()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_folio():
+        fecha = timezone.now().strftime("%Y%m%d")
+        aleatorio = uuid.uuid4().hex[:6].upper()
+        return f"SAL-{fecha}-{aleatorio}"
+
+    def __str__(self):
+        return f"{self.folio_number} — Pedido {self.order_id}"
 
 
 
