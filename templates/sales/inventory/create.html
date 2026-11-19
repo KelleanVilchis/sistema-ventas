@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Nuevo Gasto{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Registrar Gasto</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Compra de inventario o gasto operativo</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:expense_list' %}" class="btn btn-sm btn-light-primary">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <form method="post" class="form" id="expense-form">
+        {% csrf_token %}
+        <div class="card-body border-top p-9">
+
+            <div class="row mb-6">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Tipo de gasto</label>
+                    <select name="expense_type" id="expense_type" class="form-select form-select-solid" required>
+                        {% for key, label in type_choices %}
+                            <option value="{{ key }}" {% if key == 'OPERATIVE' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="text-muted fs-8 mt-1">
+                        Solo <strong>Inversión</strong> agrega productos al inventario.
+                    </div>
+                </div>
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label fw-semibold fs-6">Moneda</label>
+                    <select name="currency" class="form-select form-select-solid">
+                        <option value="">Sin moneda</option>
+                        {% for c in currencies %}
+                            <option value="{{ c.id }}">{{ c.name }} ({{ c.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-6">
+                <div class="col-lg-12 fv-row">
+                    <label class="form-label fw-semibold fs-6">Descripción</label>
+                    <textarea name="description" rows="2" class="form-control form-control-solid"
+                              placeholder="Ej: Compra a proveedor, pago de renta, reparación..."></textarea>
+                </div>
+            </div>
+
+            <!-- ═══ CAMPO MONTO (solo si NO es inversión) ═══ -->
+            <div class="row mb-6" id="amount-field">
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label required fw-semibold fs-6">Monto total</label>
+                    <input type="number" name="amount" step="0.01" min="0"
+                           class="form-control form-control-solid" id="amount-input">
+                </div>
+                <div class="col-lg-6 fv-row">
+                    <label class="form-label fw-semibold fs-6">Fecha del gasto</label>
+                    <input type="datetime-local" name="date_expense" class="form-control form-control-solid">
+                </div>
+            </div>
+
+            <!-- ═══ SECCIÓN PRODUCTOS (solo si es inversión) ═══ -->
+            <div id="investment-section" style="display: none;">
+                <div class="separator my-5"></div>
+                <h4 class="fw-bold fs-5 mb-4">Productos de la inversión</h4>
+
+                <div class="table-responsive">
+                    <table class="table align-middle" id="items-table">
+                        <thead>
+                            <tr class="text-muted fw-bold fs-8 text-uppercase">
+                                <th>Producto</th>
+                                <th class="w-100px">Cantidad</th>
+                                <th class="w-150px">Costo unitario</th>
+                                <th class="w-125px text-end">Subtotal</th>
+                                <th class="w-50px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-body">
+                            <!-- Filas dinámicas -->
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">Total:</td>
+                                <td class="text-end fw-bold fs-5" id="investment-total">$0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-light-primary mt-3" onclick="addItemRow()">
+                    <i class="ki-duotone ki-plus fs-4"><span class="path1"></span><span class="path2"></span></i>
+                    Agregar producto
+                </button>
+            </div>
+
+        </div>
+
+        <div class="card-footer d-flex justify-content-end py-6 px-9">
+            <a href="{% url 'sales:expense_list' %}" class="btn btn-light me-3">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar Gasto</button>
+        </div>
+    </form>
+</div>
+
+<!-- Template oculto para filas -->
+<template id="item-row-template">
+    <tr class="item-row">
+        <td>
+            <select name="product_ids[]" class="form-select form-select-sm form-select-solid item-product" required>
+                <option value="">Selecciona producto...</option>
+                {% for p in products %}
+                    <option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="number" name="quantities[]" min="1" value="1"
+                   class="form-control form-control-sm form-control-solid item-qty" required>
+        </td>
+        <td>
+            <input type="number" name="unit_costs[]" step="0.01" min="0" value="0"
+                   class="form-control form-control-sm form-control-solid item-cost" required>
+        </td>
+        <td class="text-end fw-bold item-subtotal">$0.00</td>
+        <td>
+            <button type="button" class="btn btn-icon btn-sm btn-light-danger" onclick="removeItemRow(this)">
+                <i class="ki-duotone ki-trash fs-5"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></span></i>
+            </button>
+        </td>
+    </tr>
+</template>
+
+<script>
+    const typeSelect = document.getElementById('expense_type');
+    const investmentSection = document.getElementById('investment-section');
+    const amountField = document.getElementById('amount-field');
+    const amountInput = document.getElementById('amount-input');
+
+    function toggleSections() {
+        const isInvestment = typeSelect.value === 'INVESTMENT';
+
+        investmentSection.style.display = isInvestment ? 'block' : 'none';
+        amountField.style.display = isInvestment ? 'none' : 'flex';
+
+        amountInput.required = !isInvestment;
+
+        if (isInvestment && document.getElementById('items-body').children.length === 0) {
+            addItemRow();
+        }
+    }
+
+    typeSelect.addEventListener('change', toggleSections);
+
+    function addItemRow() {
+        const tbody = document.getElementById('items-body');
+        const tmpl = document.getElementById('item-row-template');
+        const clone = tmpl.content.cloneNode(true);
+        tbody.appendChild(clone);
+
+        const row = tbody.lastElementChild;
+        row.querySelectorAll('.item-qty, .item-cost').forEach(el => {
+            el.addEventListener('input', () => recalcRow(row));
+        });
+        recalcRow(row);
+    }
+
+    function removeItemRow(btn) {
+        btn.closest('tr').remove();
+        recalcTotal();
+    }
+
+    function recalcRow(row) {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const cost = parseFloat(row.querySelector('.item-cost').value) || 0;
+        const subtotal = qty * cost;
+        row.querySelector('.item-subtotal').textContent = '$' + subtotal.toFixed(2);
+        recalcTotal();
+    }
+
+    function recalcTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const cost = parseFloat(row.querySelector('.item-cost').value) || 0;
+            total += qty * cost;
+        });
+        document.getElementById('investment-total').textContent = '$' + total.toFixed(2);
+    }
+
+    // Inicializar
+    toggleSections();
+</script>
+{% endblock %}

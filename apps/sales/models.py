@@ -16,7 +16,6 @@ class Combo(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)
 
-
     def purchase_price(self):
         return sum(
             item.product.purchase_price * item.quantity
@@ -54,7 +53,7 @@ class Order(models.Model):
         ('COMPLETED', 'Completado'),
         ('CANCELLED', 'Cancelado'),
     ]
-    folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)    
+    folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)
     customer = models.CharField(max_length=255)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, related_name='orders')
@@ -66,7 +65,7 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} - {self.status}"
-# Create your models here.
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
@@ -81,9 +80,6 @@ class OrderItem(models.Model):
         return f"Item {self.id} - Order {self.order.id}"
 
 
-
-
-
 class Sale(models.Model):
     STATUS_CHOICES = [
         ('SOLD', 'VENDIDO'),
@@ -94,15 +90,12 @@ class Sale(models.Model):
     folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='sales')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=10,choices=STATUS_CHOICES,default="SOLD",db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="SOLD", db_index=True)
     company = models.ForeignKey(Company, on_delete=models.SET_NULL, related_name="sales", null=True)
     date_sale = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, related_name='created_sales')
-
-    def __str__(self):
-        return f"Sale {self.id} - Order {self.order.id}"
 
     def save(self, *args, **kwargs):
         if not self.folio_number:
@@ -119,9 +112,17 @@ class Sale(models.Model):
         return f"{self.folio_number} — Pedido {self.order_id}"
 
 
-
-
 class Expense(models.Model):
+    TYPE_CHOICES = [
+        ('INVESTMENT', 'Inversión'),
+        ('OPERATIVE', 'Gasto operativo'),
+        ('EMERGENCY', 'Emergencia'),
+        ('MAINTENANCE', 'Mantenimiento'),
+        ('TAXES', 'Impuestos'),
+        ('SALARIES', 'Salarios'),
+        ('UNNECESSARY', 'Innecesario'),
+        ('OTHER', 'Otro'),
+    ]
     STATUS_CHOICES = [
         ('PENDING', 'En espera'),
         ('APPROVED', 'Aprobado'),
@@ -129,55 +130,76 @@ class Expense(models.Model):
     ]
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, related_name='expenses')
-    description = models.TextField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='APPROVED')
+    expense_type = models.CharField(max_length=15, choices=TYPE_CHOICES, default='OPERATIVE', db_index=True)
     company = models.ForeignKey('company.Company', on_delete=models.CASCADE, related_name='expenses')
-    date_expense = models.DateTimeField()
+    date_expense = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, related_name='created_expenses')
 
-    def __str__(self):
-        return f"Expense {self.id} - {self.status}"
+    class Meta:
+        ordering = ['-date_expense']
 
-
-
-class Inventory(models.Model):
-    product = models.OneToOneField(Product, on_delete=models.CASCADE)        
-    quantity = models.PositiveIntegerField()
+    @property
+    def is_investment(self):
+        return self.expense_type == 'INVESTMENT'
 
     def __str__(self):
-        return f"{self.product} - {self.quantity}"
-    
-
-class InventoryMovementType(models.IntegerChoices):
-    IN = 1,"Entrada"
-    OUT = 2,"Salida"
+        return f"{self.get_expense_type_display()} - ${self.amount}"
 
 
-class InventoryMovement(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    movement_type = models.SmallIntegerField(choices=InventoryMovementType.choices, default=InventoryMovementType.IN)
-    quantity = models.PositiveIntegerField()
-    currency = models.ForeignKey(Currency, on_delete=models.SET_NULL, null=True, related_name='inventory_movements')
-    concept = models.CharField(max_length=255, blank=True, null=True)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='inventory_movements')
+# ═══════════════════════════════════════════════════════════════════
+# DEVOLUCIONES (solo registro financiero, sin inventario)
+# ═══════════════════════════════════════════════════════════════════
+
+
+class SaleReturn(models.Model):
+    """
+    Cabecera de una devolución asociada a una venta.
+    Solo registra el reembolso financiero (no toca stock).
+    """
+    STATUS_CHOICES = [
+        ('COMPLETED', 'Completada'),
+        ('CANCELLED', 'Cancelada'),
+    ]
+
+    folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)
+    sale = models.ForeignKey(Sale, on_delete=models.PROTECT, related_name='returns')
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='returns')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='returns')
+    total_refunded = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    reason = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='COMPLETED')
+    created_by = models.ForeignKey(
+        AppUser, on_delete=models.SET_NULL, null=True, related_name='created_returns'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.folio_number:
+            fecha = timezone.now().strftime("%Y%m%d")
+            aleatorio = uuid.uuid4().hex[:6].upper()
+            self.folio_number = f"RET-{fecha}-{aleatorio}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.get_movement_type_display()} - {self.product.name} ({self.quantity})"
-    
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        inventory = Inventory.objects.get(product=self.product)
+        return f"{self.folio_number} — Venta {self.sale.folio_number}"
 
-        if self.movement_type == InventoryMovementType.IN:
-            inventory.quantity += self.quantity
-        elif self.movement_type == InventoryMovementType.OUT:
-            if self.quantity > inventory.quantity:
-                raise ValueError("No hay suficiente inventario para esta salida.")
-            inventory.quantity -= self.quantity
 
-        inventory.save()
+class SaleReturnItem(models.Model):
+    """
+    Detalle de cada producto devuelto dentro de una SaleReturn.
+    Solo guarda cantidades y montos; no hay destino RESTOCK/DAMAGED.
+    """
+    sale_return = models.ForeignKey(SaleReturn, on_delete=models.CASCADE, related_name='items')
+    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True, related_name='return_items')
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, related_name='return_items')
+    quantity = models.PositiveIntegerField()
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} × {self.product} (${self.subtotal})"

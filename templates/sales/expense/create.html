@@ -7,7 +7,7 @@
     <div class="card-header border-0 pt-5">
         <h3 class="card-title align-items-start flex-column">
             <span class="card-label fw-bold fs-3 mb-1">Registrar Nuevo Gasto</span>
-            <span class="text-muted mt-1 fw-semibold fs-7">Añade un egreso operativo al sistema</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Añade un egreso al sistema</span>
         </h3>
         <div class="card-toolbar">
             <a href="{% url 'sales:expense_list' %}" class="btn btn-sm btn-light-primary">
@@ -46,22 +46,26 @@
 
             <div class="row mb-6">
                 <div class="col-lg-6 fv-row">
-                    <label class="form-label required fw-semibold fs-6">Estado</label>
-                    <select name="status" class="form-select form-select-solid bg-transparent" required>
-                        {% for code, label in status_choices %}
-                            <option value="{{ code }}" {% if status == code or code == 'PENDING' and not status %}selected{% endif %}>{{ label }}</option>
+                    <label class="form-label required fw-semibold fs-6">Tipo de gasto</label>
+                    <select name="expense_type" class="form-select form-select-solid bg-transparent" required>
+                        {% for code, label in type_choices %}
+                            <option value="{{ code }}" {% if expense_type == code or code == 'OPERATIVE' and not expense_type %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
+                    <div class="text-muted fs-8 mt-1">
+                        Clasifica el egreso para los reportes.
+                    </div>
                 </div>
                 <div class="col-lg-6 fv-row">
                     <label class="form-label required fw-semibold fs-6">Fecha y Hora del Gasto</label>
                     <input type="datetime-local" name="date_expense" class="form-control form-control-solid bg-transparent" required />
                 </div>
             </div>
+
             <div class="row mb-6">
                 <div class="col-lg-12 fv-row">
                     <label class="form-label required fw-semibold fs-6">Descripción del Gasto</label>
-                    <textarea name="description" class="form-control form-control-solid bg-transparent" rows="3" placeholder="Detalle del egreso..." required>{{ description|default:'' }}</textarea>
+                    <textarea name="description" class="form-control form-control-solid bg-transparent" rows="3" placeholder="Ej: Compra de 20 kg de carne, 40 panes, 5 kg de queso..." required>{{ description|default:'' }}</textarea>
                 </div>
             </div>
         </div>

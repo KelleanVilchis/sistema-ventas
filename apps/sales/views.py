@@ -1,5 +1,6 @@
 import uuid
-from django.db.models import Exists, OuterRef
+from decimal import Decimal
+from django.db.models import Exists, OuterRef, Count
 from django.db import transaction
 from django.http import request
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,7 +8,7 @@ from django.utils import timezone
 from django.views import View
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Combo, ComboItem, Product, Order, OrderItem, Currency, Sale, Expense
+from .models import Combo, ComboItem, Product, Order, OrderItem, Currency, Sale, Expense, SaleReturn, SaleReturnItem
 from apps.company.models import Company
 from apps.accounts.models import AppUser
 from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
@@ -139,7 +140,7 @@ class DeleteComboView(BasePermissionMixin, View):
         company = Company.objects.get(selected=True, owner=owner)
         combo = get_object_or_404(Combo, id=combo_id,company=company)
         try:
-            combo_name = combo.namee
+            combo_name = combo.name
             combo.delete()
             messages.success(request, f'El combo "{combo_name}" fue eliminado correctamente.')
         except Exception as e:
@@ -155,7 +156,7 @@ class OrderListView(BasePermissionMixin, View):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
         sold_sales = Sale.objects.filter(order=OuterRef("pk"),status="SOLD")
-        orders = (Order.objects.filter(company=company).select_related("company", "currency").annotate(is_sold=Exists(sold_sales)))
+        orders = (Order.objects.filter(company=company).select_related("company", "currency").annotate(is_sold=Exists(sold_sales)).order_by("-created_at") )
         return render(request, "sales/order/index.html", {"orders": orders})
 
 
@@ -353,31 +354,23 @@ class OrderSellView(BasePermissionMixin, View):
         order = get_object_or_404(Order, pk=pk)
 
         if order.status != "COMPLETED":
-            messages.error(
-                request,
-                f"El pedido {order.folio_number} debe completarse antes de venderse.",
-            )
+            messages.error(request, f"El pedido {order.folio_number} debe completarse antes de venderse.")
             return redirect("sales:order_list")
 
-        if order.sales.exists():
-            messages.info(
-                request,
-                f"El pedido {order.folio_number} ya tiene una venta registrada.",
-            )
+        if order.sales.filter(status="SOLD").exists():
+            messages.info(request, f"El pedido {order.folio_number} ya tiene una venta registrada.")
             return redirect("sales:order_list")
 
         try:
             with transaction.atomic():
                 Sale.objects.create(
                     order=order,
+                    company=order.company,   # ← AGREGAR
                     total_amount=order.total_amount,
                     date_sale=timezone.now(),
                     created_by=request.user,
                 )
-            messages.success(
-                request,
-                f"Venta registrada para el pedido {order.folio_number}.",
-            )
+            messages.success(request, f"Venta registrada para el pedido {order.folio_number}.")
         except Exception as e:
             messages.error(request, f"No se pudo registrar la venta: {e}")
 
@@ -408,8 +401,37 @@ class SaleListView(BasePermissionMixin, View):
     permission_required = 'sales.view_sale'
 
     def get(self, request):
-        sales = Sale.objects.select_related('order', 'created_by').filter().order_by('-date_sale')
-        return render(request, 'sales/sales/sale_list.html', {'sales': sales})
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        status_filter = request.GET.get('status', 'ALL')
+
+        sales_qs = (
+            Sale.objects
+            .select_related('order', 'created_by')
+            .filter(company=company)
+            .order_by('-date_sale')
+        )
+
+        if status_filter in ('SOLD', 'RETURNED', 'CANCELLED', 'PENDING'):
+            sales_qs = sales_qs.filter(status=status_filter)
+        else:
+            status_filter = 'ALL'
+
+        counts_qs = (
+            Sale.objects
+            .filter(company=company)
+            .values('status')
+            .annotate(n=Count('id'))
+        )
+        counts = {row['status']: row['n'] for row in counts_qs}
+        counts['ALL'] = sum(counts.values()) if counts else 0
+
+        return render(request, 'sales/sales/sale_list.html', {
+            'sales': sales_qs,
+            'status_filter': status_filter,
+            'counts': counts,
+        })
 
 
 class CreateSaleView(BasePermissionMixin, View):
@@ -454,9 +476,11 @@ class CreateSaleView(BasePermissionMixin, View):
                 folio_number=folio,
                 order=order_obj,
                 total_amount=total_amount,
+                company=company,   # ← AGREGAR
                 date_sale=date_sale if date_sale else timezone.now(),
                 created_by=request.user if request.user.is_authenticated else None
             )
+
 
             messages.success(request, f'Venta {folio} registrada exitosamente.')
             return redirect('sales:sale_list')
@@ -526,8 +550,18 @@ class ExpenseListView(BasePermissionMixin, View):
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        expenses = Expense.objects.select_related('company', 'currency', 'created_by').filter(company=company).order_by('-date_expense')
-        return render(request, 'sales/expense/index.html', {'expenses': expenses})
+
+        expenses = (
+            Expense.objects
+            .filter(company=company)
+            .select_related('company', 'currency', 'created_by')
+            .order_by('-date_expense')
+        )
+
+        return render(request, 'sales/expense/index.html', {
+            'expenses': expenses,
+            'type_choices': Expense.TYPE_CHOICES,
+        })
 
 
 class CreateExpenseView(BasePermissionMixin, View):
@@ -536,51 +570,51 @@ class CreateExpenseView(BasePermissionMixin, View):
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        currencies = Currency.objects.filter(company=company)
-        context = {
-            'currencies': currencies,
-            'status_choices': Expense.STATUS_CHOICES
-        }
-        return render(request, 'sales/expense/create.html', context)
+        return render(request, 'sales/expense/create.html', {
+            'currencies': Currency.objects.filter(company=company),
+            'type_choices': Expense.TYPE_CHOICES,
+        })
 
     def post(self, request):
-        amount = request.POST.get('amount')
-        currency_id = request.POST.get('currency')
-        description = request.POST.get('description')
-        status = request.POST.get('status', 'PENDING')
-        date_expense = request.POST.get('date_expense')  #   Assuming the logged-in user is the owner of the company
         owner = AppUser.objects.get(id=request.user.id)
-        company = Company.objects.get(selected=True, owner=owner)   
-        currencies = Currency.objects.filter(company=company)
+        company = Company.objects.get(selected=True, owner=owner)
 
-        context = {
-            'amount': amount,
-            'currency_id': currency_id,
-            'description': description,
-            'status': status,
-            'date_expense': date_expense,
-            'currencies': currencies,
-            'status_choices': Expense.STATUS_CHOICES
-        }
+        amount_raw = request.POST.get('amount') or 0
+        description = request.POST.get('description', '')
+        expense_type = request.POST.get('expense_type', 'OPERATIVE')
+        currency_id = request.POST.get('currency')
+        date_expense = request.POST.get('date_expense')
 
         try:
-            currency_obj = Currency.objects.filter(id=currency_id).first() if currency_id else None
+            currency_obj = (
+                Currency.objects.filter(id=currency_id, company=company).first()
+                if currency_id else None
+            )
+
+            amount = Decimal(str(amount_raw))
+            if amount <= 0:
+                raise ValueError("El monto debe ser mayor a 0.")
 
             Expense.objects.create(
                 amount=amount,
                 currency=currency_obj,
                 description=description,
-                status=status,
+                status='APPROVED',
+                expense_type=expense_type,
                 company=company,
-                date_expense=date_expense if date_expense else timezone.now(),
-                created_by=request.user if request.user.is_authenticated else None
+                date_expense=date_expense or timezone.now(),
+                created_by=request.user,
             )
 
-            messages.success(request, 'Gasto registrado exitosamente.')
+            messages.success(request, 'Gasto registrado correctamente.')
             return redirect('sales:expense_list')
+
+        except ValueError as e:
+            messages.error(request, str(e))
         except Exception as e:
-            messages.error(request, f'Ocurrió un error al registrar el gasto: {e}')
-            return render(request, 'sales/expense/create.html', context)
+            messages.error(request, f'Error al registrar el gasto: {e}')
+
+        return redirect('sales:expense_create')
 
 
 class UpdateExpenseView(BasePermissionMixin, View):
@@ -589,37 +623,47 @@ class UpdateExpenseView(BasePermissionMixin, View):
     def get(self, request, expense_id):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        expense = get_object_or_404(Expense, id=expense_id)
-        currencies = Currency.objects.filter(company=company)
-        context = {
+        expense = get_object_or_404(Expense, id=expense_id, company=company)
+
+        return render(request, 'sales/expense/edit.html', {
             'expense': expense,
-            'currencies': currencies,
-            'status_choices': Expense.STATUS_CHOICES
-        }
-        return render(request, 'sales/expense/edit.html', context)
+            'currencies': Currency.objects.filter(company=company),
+            'type_choices': Expense.TYPE_CHOICES,
+        })
 
     def post(self, request, expense_id):
-        expense = get_object_or_404(Expense, id=expense_id)
-        amount = request.POST.get('amount')
-        currency_id = request.POST.get('currency')
-        description = request.POST.get('description')
-        status = request.POST.get('status')
-        date_expense = request.POST.get('date_expense')
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+        expense = get_object_or_404(Expense, id=expense_id, company=company)
 
         try:
+            amount = Decimal(str(request.POST.get('amount') or 0))
+            if amount <= 0:
+                raise ValueError("El monto debe ser mayor a 0.")
+
+            currency_id = request.POST.get('currency')
+            expense.currency = (
+                Currency.objects.filter(id=currency_id, company=company).first()
+                if currency_id else None
+            )
+
             expense.amount = amount
-            expense.currency = Currency.objects.filter(id=currency_id).first() if currency_id else None
-            expense.description = description
-            expense.status = status
+            expense.description = request.POST.get('description', '')
+            expense.expense_type = request.POST.get('expense_type', expense.expense_type)
+
+            date_expense = request.POST.get('date_expense')
             if date_expense:
                 expense.date_expense = date_expense
-            expense.save()
 
+            expense.save()
             messages.success(request, 'Gasto actualizado correctamente.')
-            return redirect('sales:expense_list')
+
+        except ValueError as e:
+            messages.error(request, str(e))
         except Exception as e:
-            messages.error(request, f'Error al actualizar el gasto: {e}')
-            return redirect('sales:expense_edit', expense_id=expense.id)
+            messages.error(request, f'Error al actualizar: {e}')
+
+        return redirect('sales:expense_list')
 
 
 class DeleteExpenseView(BasePermissionMixin, View):
@@ -629,12 +673,101 @@ class DeleteExpenseView(BasePermissionMixin, View):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
         expense = get_object_or_404(Expense, id=expense_id, company=company)
+
         try:
             expense.delete()
-            messages.success(request, 'El gasto fue eliminado correctamente.')
+            messages.success(request, 'Gasto eliminado.')
         except Exception as e:
-            messages.error(request, 'No se pudo eliminar el gasto.')
+            messages.error(request, f'Error al eliminar: {e}')
+
         return redirect('sales:expense_list')
 
 
 
+class SaleReturnListView(BasePermissionMixin, View):
+    permission_required = "sales.view_salereturn"
+
+    def get(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+        returns = (
+            SaleReturn.objects
+            .filter(company=company)
+            .select_related("sale", "order", "created_by")
+            .prefetch_related("items__product")
+            .order_by("-created_at")
+        )
+        return render(request, "sales/return/index.html", {"returns": returns})
+
+
+
+class SaleReturnView(BasePermissionMixin, View):
+    permission_required = "sales.change_sale"
+
+    def post(self, request, sale_id):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+        sale = get_object_or_404(Sale, id=sale_id, company=company)
+
+        if sale.status != "SOLD":
+            messages.error(request, "Solo se pueden devolver ventas en estado Vendido.")
+            return redirect("sales:sale_list")
+
+        item_ids = request.POST.getlist("item_ids[]")
+        quantities = request.POST.getlist("quantities[]")
+        reason = request.POST.get("reason", "").strip()
+
+        if not item_ids:
+            messages.error(request, "Debes seleccionar al menos un producto para devolver.")
+            return redirect("sales:sale_list")
+
+        try:
+            with transaction.atomic():
+                sale_return = SaleReturn.objects.create(
+                    sale=sale,
+                    order=sale.order,
+                    company=company,
+                    reason=reason,
+                    created_by=request.user,
+                )
+
+                total_refunded = Decimal("0")
+
+                for item_id, qty_str in zip(item_ids, quantities):
+                    order_item = OrderItem.objects.filter(id=item_id, order=sale.order).first()
+                    if not order_item:
+                        continue
+
+                    try:
+                        qty = int(qty_str or 0)
+                    except (TypeError, ValueError):
+                        continue
+
+                    if qty <= 0 or qty > order_item.quantity:
+                        continue
+
+                    unit_price = Decimal(str(order_item.price))
+                    subtotal = unit_price * qty
+
+                    SaleReturnItem.objects.create(
+                        sale_return=sale_return,
+                        order_item=order_item,
+                        product=order_item.product,
+                        quantity=qty,
+                        unit_price=unit_price,
+                        subtotal=subtotal,
+                    )
+
+                    total_refunded += subtotal
+
+                sale_return.total_refunded = total_refunded
+                sale_return.save(update_fields=["total_refunded"])
+
+                sale.status = "RETURNED"
+                sale.save(update_fields=["status", "updated_at"])
+
+            messages.success(request, f"Devolución {sale_return.folio_number} registrada por ${total_refunded}.")
+        except Exception as e:
+            messages.error(request, f"No se pudo registrar la devolución: {e}")
+
+        return redirect("sales:sale_list")

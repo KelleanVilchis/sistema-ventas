@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Inventario{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Inventario</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Productos con stock disponible</span>
+        </h3>
+    </div>
+
+    <div class="card-body py-3">
+
+        <!-- TABLA (DESKTOP) -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle table-row-dashed fs-6 gy-5">
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th class="min-w-100px">SKU</th>
+                        <th class="min-w-175px">Producto</th>
+                        <th class="min-w-125px">Categoría</th>
+                        <th class="min-w-100px text-center">Stock</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 fw-semibold">
+                    {% for item in inventory_items %}
+                    <tr>
+                        <td><span class="badge badge-light-dark fw-bold fs-7">{{ item.product.sku }}</span></td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="text-gray-800 fw-bold">{{ item.product.name }}</span>
+                                {% if item.product.status == 'INACTIVE' %}
+                                    <span class="badge badge-light-warning fs-8 mt-1">Inactivo</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if item.product.category %}
+                                <span class="badge badge-light-info">{{ item.product.category.name }}</span>
+                            {% else %}
+                                <span class="text-muted fs-7">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if item.quantity < 5 %}
+                                <span class="badge badge-light-warning fw-bold fs-6">{{ item.quantity }}</span>
+                            {% else %}
+                                <span class="badge badge-light-success fw-bold fs-6">{{ item.quantity }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-10 text-muted">No hay productos con stock disponible.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MÓVIL -->
+        <div class="d-block d-md-none">
+            {% for item in inventory_items %}
+            <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge badge-light-dark fw-bold fs-7">{{ item.product.sku }}</span>
+                    {% if item.quantity < 5 %}
+                        <span class="badge badge-light-warning fw-bold fs-6">Stock: {{ item.quantity }}</span>
+                    {% else %}
+                        <span class="badge badge-light-success fw-bold fs-6">Stock: {{ item.quantity }}</span>
+                    {% endif %}
+                </div>
+                <div class="text-gray-800 fw-bold fs-6 mb-2">{{ item.product.name }}</div>
+                {% if item.product.category %}
+                    <div class="text-muted fs-8">Categoría: {{ item.product.category.name }}</div>
+                {% endif %}
+                {% if item.product.status == 'INACTIVE' %}
+                    <span class="badge badge-light-warning fs-8 mt-2">Producto inactivo</span>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center py-10 text-muted">No hay productos con stock disponible.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

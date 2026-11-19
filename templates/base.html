@@ -308,7 +308,7 @@
                                         </a>
                                     </div>
 
-                                    <!-- Compañías (Company) -->
+                                    <!-- Compañías -->
                                     <div class="menu-item me-lg-2">
                                         <a href="{% url 'company:company_index' %}"
                                            class="menu-link {% if '/company/' in request.path %}active{% endif %}">
@@ -317,17 +317,17 @@
                                     </div>
 
                                     <!-- Catálogo (Desplegable) -->
-                                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" 
-                                         data-kt-menu-placement="bottom-start" 
+                                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+                                         data-kt-menu-placement="bottom-start"
                                          class="menu-item menu-lg-down-accordion me-lg-2 {% if '/catalog/' in request.path %}here show{% endif %}">
-                                        
+
                                         <span class="menu-link">
                                             <span class="menu-title">Catálogo</span>
                                             <span class="menu-arrow d-lg-none"></span>
                                         </span>
-                                        
+
                                         <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-2 py-2 py-lg-4 w-lg-200px">
-                                            
+
                                             <!-- Productos -->
                                             <div class="menu-item">
                                                 <a class="menu-link {% if '/catalog/products/' in request.path %}active{% endif %}" href="{% url 'catalog:product_list' %}">
@@ -355,6 +355,7 @@
                                         </div>
                                     </div>
 
+                                    <!-- Combos -->
                                     <div class="menu-item me-lg-2">
                                         <a href="{% url 'sales:combo_list' %}"
                                            class="menu-link {% if 'combos/' in request.path %}active{% endif %}">
@@ -362,21 +363,23 @@
                                         </a>
                                     </div>
 
-                                    <!-- Ventas -->
+                                    <!-- Pedidos -->
                                     <div class="menu-item me-lg-2">
                                         <a href="{% url 'sales:order_list' %}"
                                            class="menu-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}">
                                             <span class="menu-title">Pedidos</span>
                                         </a>
                                     </div>
-                                    
+
+                                    <!-- Ventas -->
                                     <div class="menu-item me-lg-2">
                                         <a href="{% url 'sales:sale_list' %}"
-                                           class="menu-link {% if '/ventas/' in request.path %}active{% endif %}">
+                                           class="menu-link {% if '/ventas/' in request.path and '/ventas/pedidos/' not in request.path and '/ventas/gastos/' not in request.path and '/devoluciones/' not in request.path %}active{% endif %}">
                                             <span class="menu-title">Ventas</span>
                                         </a>
                                     </div>
 
+                                    <!-- Gastos -->
                                     <div class="menu-item me-lg-2">
                                         <a href="{% url 'sales:expense_list' %}"
                                            class="menu-link {% if '/ventas/gastos/' in request.path %}active{% endif %}">
@@ -384,6 +387,13 @@
                                         </a>
                                     </div>
 
+                                    <!-- Devoluciones (NUEVO) -->
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'sales:return_list' %}"
+                                           class="menu-link {% if '/devoluciones/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Devoluciones</span>
+                                        </a>
+                                    </div>
 
                                 </div>
                                 <!-- Fin opciones -->

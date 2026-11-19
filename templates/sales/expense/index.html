@@ -7,7 +7,7 @@
     <div class="card-header border-0 pt-5">
         <h3 class="card-title align-items-start flex-column">
             <span class="card-label fw-bold fs-3 mb-1">Registro de Gastos</span>
-            <span class="text-muted mt-1 fw-semibold fs-7">Control de salidas y egresos operativos</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Control de salidas y egresos</span>
         </h3>
         <div class="card-toolbar">
             <a href="{% url 'sales:expense_create' %}" class="btn btn-sm btn-primary">
@@ -31,39 +31,45 @@
             <table class="table align-middle table-row-dashed fs-6 gy-5">
                 <thead>
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th class="min-w-150px">Descripción</th>
-                        <th class="min-w-125px">Sucursal</th>
+                        <th class="min-w-125px">Fecha</th>
+                        <th class="min-w-150px">Tipo</th>
+                        <th class="min-w-200px">Descripción</th>
                         <th class="min-w-100px text-end">Monto</th>
-                        <th class="min-w-100px text-center">Estado</th>
-                        <th class="min-w-125px">Fecha de Gasto</th>
+                        <th class="min-w-125px">Sucursal</th>
                         <th class="text-end min-w-100px">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="text-gray-600 fw-semibold">
                     {% for expense in expenses %}
                     <tr>
+                        <td>{{ expense.date_expense|date:"d/m/Y H:i" }}</td>
+
+                        <!-- TIPO -->
                         <td>
-                            <div class="d-flex align-items-center">
-                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
-                                    <div class="symbol-label fs-3 bg-light-danger text-danger fw-bold">
-                                        $
-                                    </div>
-                                </div>
-                                <span class="text-gray-800 fw-bold">{{ expense.description|truncatechars:40 }}</span>
-                            </div>
-                        </td>
-                        <td><span class="badge badge-light-info fw-bold">{{ expense.company.name }}</span></td>
-                        <td class="text-end fw-bold text-danger fs-6">${{ expense.amount }} {{ expense.currency.code|default:"" }}</td>
-                        <td class="text-center">
-                            {% if expense.status == 'APPROVED' %}
-                                <span class="badge badge-light-success fw-bold">Aprobado</span>
-                            {% elif expense.status == 'REJECTED' %}
-                                <span class="badge badge-light-danger fw-bold">Rechazado</span>
+                            {% if expense.expense_type == 'INVESTMENT' %}
+                                <span class="badge badge-light-success fw-bold">{{ expense.get_expense_type_display }}</span>
+                            {% elif expense.expense_type == 'EMERGENCY' %}
+                                <span class="badge badge-light-danger fw-bold">{{ expense.get_expense_type_display }}</span>
+                            {% elif expense.expense_type == 'UNNECESSARY' %}
+                                <span class="badge badge-light-warning fw-bold">{{ expense.get_expense_type_display }}</span>
+                            {% elif expense.expense_type == 'TAXES' or expense.expense_type == 'SALARIES' %}
+                                <span class="badge badge-light-dark fw-bold">{{ expense.get_expense_type_display }}</span>
                             {% else %}
-                                <span class="badge badge-light-warning fw-bold">En espera</span>
+                                <span class="badge badge-light-info fw-bold">{{ expense.get_expense_type_display }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ expense.date_expense|date:"d/m/Y H:i" }}</td>
+
+                        <td class="text-gray-800 fw-bold">{{ expense.description|truncatechars:50 }}</td>
+
+                        <td class="text-end fw-bold text-danger fs-6">
+                            ${{ expense.amount }}
+                            {% if expense.currency %}
+                                <span class="text-muted fs-8">{{ expense.currency.code }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td><span class="badge badge-light-info fw-bold">{{ expense.company.name }}</span></td>
+
                         <td class="text-end">
                             <a href="{% url 'sales:expense_edit' expense.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
                                 <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
@@ -102,15 +108,24 @@
                     </div>
                 </div>
 
-                <p class="text-gray-800 fw-semibold fs-7 mb-2">{{ expense.description }}</p>
+                <div class="mb-2">
+                    {% if expense.expense_type == 'INVESTMENT' %}
+                        <span class="badge badge-light-success fw-bold fs-8">{{ expense.get_expense_type_display }}</span>
+                    {% elif expense.expense_type == 'EMERGENCY' %}
+                        <span class="badge badge-light-danger fw-bold fs-8">{{ expense.get_expense_type_display }}</span>
+                    {% elif expense.expense_type == 'UNNECESSARY' %}
+                        <span class="badge badge-light-warning fw-bold fs-8">{{ expense.get_expense_type_display }}</span>
+                    {% else %}
+                        <span class="badge badge-light-info fw-bold fs-8">{{ expense.get_expense_type_display }}</span>
+                    {% endif %}
+                </div>
+
+                <p class="text-gray-800 fw-semibold fs-7 mb-2">{{ expense.description|truncatechars:80 }}</p>
 
                 <div class="d-flex justify-content-between align-items-center my-2">
                     <span class="fw-bold text-danger fs-5">${{ expense.amount }}</span>
-                    <span class="badge badge-light-{{ expense.status|lower }} fw-bold">{{ expense.get_status_display }}</span>
+                    <span class="text-muted fs-8">{{ expense.date_expense|date:"d/m/Y H:i" }}</span>
                 </div>
-
-                <div class="separator separator-dashed my-2"></div>
-                <div class="text-muted fs-8">Fecha: {{ expense.date_expense|date:"d/m/Y H:i" }}</div>
             </div>
             {% empty %}
             <div class="text-center py-10 text-muted">No hay gastos registrados.</div>
@@ -124,7 +139,7 @@
         Swal.fire({
             text: "¿Estás seguro de eliminar este gasto?",
             icon: "warning",
-            showCancelButton: true,
+            showCancelButtons: true,
             buttonsStyling: false,
             confirmButtonText: "Sí, eliminar",
             cancelButtonText: "Cancelar",
