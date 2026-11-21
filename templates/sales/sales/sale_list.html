@@ -273,47 +273,52 @@
                             </thead>
                             <tbody>
                                 {% for item in sale.order.items.all %}
-                                {% if item.product or item.combo %}
-                                <tr>
-                                    <td>
-                                        <input type="checkbox"
-                                               class="form-check-input return-checkbox"
-                                               data-sale-id="{{ sale.id }}"
-                                               data-price="{{ item.price }}"
-                                               name="item_ids[]"
-                                               value="{{ item.id }}">
-                                    </td>
-                                    <td>
-                                        <span class="fw-bold text-gray-800">
-                                            {% if item.product %}
-                                                {{ item.product.name }}
-                                            {% elif item.combo %}
-                                                {{ item.combo.name }}
-                                                <span class="badge badge-light-info ms-2 fs-8">Combo</span>
-                                            {% endif %}
-                                        </span>
-                                        <div class="text-muted fs-8">
-                                            Cant. original: {{ item.quantity }}
-                                        </div>
-                                    </td>
-                                    <td class="text-end">${{ item.price }}</td>
-                                    <td class="text-center">
-                                        <input type="number"
-                                               class="form-control form-control-sm form-control-solid text-center return-qty"
-                                               data-sale-id="{{ sale.id }}"
-                                               name="quantities[]"
-                                               value="{{ item.quantity }}"
-                                               min="0"
-                                               max="{{ item.quantity }}"
-                                               disabled>
-                                    </td>
-                                    <td class="text-end fw-bold return-subtotal"
-                                        data-sale-id="{{ sale.id }}">
-                                        $0.00
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
+{% if item.available_quantity > 0 %}
+<tr>
+    <td>
+        <input type="checkbox"
+               class="form-check-input return-checkbox"
+               data-sale-id="{{ sale.id }}"
+               data-price="{{ item.price }}"
+               name="item_ids[]"
+               value="{{ item.id }}">
+    </td>
+    <td>
+        <span class="fw-bold text-gray-800">
+            {% if item.product %}
+                {{ item.product.name }}
+            {% elif item.combo %}
+                {{ item.combo.name }}
+                <span class="badge badge-light-info ms-2 fs-8">Combo</span>
+            {% endif %}
+        </span>
+        <div class="text-muted fs-8">
+            {% if item.returned_quantity > 0 %}
+                Original: {{ item.quantity }} ·
+                <span class="badge badge-light-warning fs-8">−{{ item.returned_quantity }} devueltos</span> ·
+                Disponibles: {{ item.available_quantity }}
+            {% else %}
+                Cant. original: {{ item.quantity }}
+            {% endif %}
+        </div>
+    </td>
+    <td class="text-end">${{ item.price }}</td>
+    <td class="text-center">
+        <input type="number"
+               class="form-control form-control-sm form-control-solid text-center return-qty"
+               data-sale-id="{{ sale.id }}"
+               name="quantities[]"
+               value="{{ item.available_quantity }}"
+               min="0"
+               max="{{ item.available_quantity }}"
+               disabled>
+    </td>
+    <td class="text-end fw-bold return-subtotal" data-sale-id="{{ sale.id }}">
+        $0.00
+    </td>
+</tr>
+{% endif %}
+{% endfor %}
                             </tbody>
                         </table>
                     </div>

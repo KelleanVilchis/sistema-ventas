@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Turno #{{ shift.id }} | Distrito 21{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Turno #{{ shift.id }}</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">
+                {{ shift.opened_at|date:"d/m/Y H:i" }}
+                {% if shift.closed_at %} — {{ shift.closed_at|date:"d/m/Y H:i" }}{% endif %}
+            </span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:shift_list' %}" class="btn btn-sm btn-light-primary">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-5">
+
+        <!-- Cuadre -->
+        <div class="row g-4 mb-8">
+            <div class="col-md-3">
+                <div class="card bg-light-primary border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Fondo inicial</span>
+                    <span class="fw-bold fs-2 text-primary">${{ shift.opening_cash }}</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light-success border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Ventas del turno</span>
+                    <span class="fw-bold fs-2 text-success">${{ total_ventas }}</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light-warning border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Devoluciones</span>
+                    <span class="fw-bold fs-2 text-warning">−${{ total_devoluciones }}</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light-danger border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Gastos</span>
+                    <span class="fw-bold fs-2 text-danger">−${{ total_gastos }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen de cierre -->
+        {% if shift.closed_at %}
+        <div class="alert alert-light-dark d-flex justify-content-between align-items-center mb-8">
+            <div>
+                <div class="fw-semibold text-gray-700">Efectivo esperado</div>
+                <div class="fs-8 text-muted">Fondo + ventas − devoluciones − gastos</div>
+            </div>
+            <div class="fw-bold fs-2">${{ shift.expected_cash }}</div>
+        </div>
+
+        <div class="alert {% if shift.difference == 0 %}alert-light-success{% elif shift.difference > 0 %}alert-light-primary{% else %}alert-light-danger{% endif %} d-flex justify-content-between align-items-center mb-8">
+            <div>
+                <div class="fw-bold">Diferencia de caja</div>
+                <div class="fs-8 text-muted">
+                    Real (${{ shift.closing_cash }}) − Esperado (${{ shift.expected_cash }})
+                </div>
+            </div>
+            <div class="fw-bold fs-1 {% if shift.difference == 0 %}text-success{% elif shift.difference > 0 %}text-primary{% else %}text-danger{% endif %}">
+                {% if shift.difference > 0 %}+{% endif %}${{ shift.difference }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Ventas del turno -->
+        <h3 class="fw-bold fs-4 mb-4">Ventas del turno ({{ ventas.count }})</h3>
+
+        <div class="table-responsive d-none d-md-block mb-8">
+            <table class="table align-middle table-row-dashed fs-7 gy-3">
+                <thead>
+                    <tr class="text-muted fw-bold fs-8 text-uppercase">
+                        <th>Folio</th>
+                        <th>Cliente</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in ventas %}
+                    <tr>
+                        <td><span class="badge badge-light-primary fw-bold">{{ sale.folio_number }}</span></td>
+                        <td class="fw-bold">{{ sale.order.customer }}</td>
+                        <td>
+                            {% if sale.status == 'SOLD' %}
+                                <span class="badge badge-light-success fs-8">Vendido</span>
+                            {% elif sale.status == 'RETURNED' %}
+                                <span class="badge badge-light-warning fs-8">Devuelto</span>
+                            {% else %}
+                                <span class="badge badge-light-danger fs-8">{{ sale.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ sale.date_sale|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end fw-bold text-success">${{ sale.total_amount }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-8 text-muted">No hay ventas en este turno.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Móvil ventas -->
+        <div class="d-block d-md-none mb-8">
+            {% for sale in ventas %}
+            <div class="border-bottom py-2 d-flex justify-content-between align-items-center fs-7">
+                <div>
+                    <div class="fw-bold">{{ sale.folio_number }}</div>
+                    <div class="text-muted fs-8">{{ sale.order.customer }}</div>
+                </div>
+                <span class="fw-bold text-success">${{ sale.total_amount }}</span>
+            </div>
+            {% empty %}
+            <div class="text-center py-6 text-muted">No hay ventas.</div>
+            {% endfor %}
+        </div>
+
+        <!-- Gastos del turno -->
+        {% if gastos %}
+        <h3 class="fw-bold fs-4 mb-4">Gastos del turno ({{ gastos.count }})</h3>
+
+        <div class="table-responsive mb-8">
+            <table class="table align-middle table-row-dashed fs-7 gy-3">
+                <thead>
+                    <tr class="text-muted fw-bold fs-8 text-uppercase">
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in gastos %}
+                    <tr>
+                        <td><span class="badge badge-light-info fs-8">{{ g.get_expense_type_display }}</span></td>
+                        <td>{{ g.description|truncatechars:50 }}</td>
+                        <td class="text-muted">{{ g.date_expense|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end fw-bold text-danger">${{ g.amount }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Devoluciones del turno -->
+        {% if devoluciones %}
+        <h3 class="fw-bold fs-4 mb-4">Devoluciones del turno ({{ devoluciones.count }})</h3>
+
+        <div class="table-responsive mb-8">
+            <table class="table align-middle table-row-dashed fs-7 gy-3">
+                <thead>
+                    <tr class="text-muted fw-bold fs-8 text-uppercase">
+                        <th>Folio</th>
+                        <th>Venta</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th class="text-end">Reembolsado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in devoluciones %}
+                    <tr>
+                        <td><span class="badge badge-light-warning fs-8">{{ r.folio_number }}</span></td>
+                        <td><span class="badge badge-light-primary fs-8">{{ r.sale.folio_number }}</span></td>
+                        <td>{{ r.order.customer }}</td>
+                        <td class="text-muted">{{ r.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="text-end fw-bold text-warning">${{ r.total_refunded }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if shift.notes %}
+        <div class="alert alert-light-warning mb-0">
+            <strong>Notas del turno:</strong> {{ shift.notes }}
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

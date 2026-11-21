@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models import Sum
 from django.utils import timezone
 from apps.accounts.models import AppUser
 from apps.catalog.models import Product, Currency
@@ -63,8 +64,19 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, related_name='created_orders')
 
+    def save(self, *args, **kwargs):
+        if not self.folio_number:
+            self.folio_number = self._generate_folio()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_folio():
+        fecha = timezone.now().strftime("%Y%m%d")
+        aleatorio = uuid.uuid4().hex[:6].upper()
+        return f"ORD-{fecha}-{aleatorio}"
+
     def __str__(self):
-        return f"Order {self.id} - {self.status}"
+        return f"{self.folio_number} — {self.customer}"
 
 
 class OrderItem(models.Model):
@@ -78,6 +90,18 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"Item {self.id} - Order {self.order.id}"
+
+    @property
+    def returned_quantity(self):
+        return self.return_items.aggregate(t=Sum('quantity'))['t'] or 0
+
+    @property
+    def available_quantity(self):
+        return self.quantity - self.returned_quantity
+
+    @property
+    def is_fully_returned(self):
+        return self.available_quantity <= 0
 
 
 class Sale(models.Model):
@@ -203,3 +227,46 @@ class SaleReturnItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} × {self.product} (${self.subtotal})"
+
+
+
+
+class Shift(models.Model):
+    """
+    Turno / caja del día.
+    Registra el fondo inicial, el cierre y la diferencia de efectivo.
+    """
+    STATUS_CHOICES = [
+        ('OPEN', 'Abierto'),
+        ('CLOSED', 'Cerrado'),
+    ]
+
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='shifts')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OPEN', db_index=True)
+
+    opening_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    closing_cash = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    expected_cash = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    difference = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    notes = models.TextField(blank=True)
+
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    opened_by = models.ForeignKey(
+        AppUser, on_delete=models.SET_NULL, null=True, related_name='shifts_opened'
+    )
+    closed_by = models.ForeignKey(
+        AppUser, on_delete=models.SET_NULL, null=True, related_name='shifts_closed'
+    )
+
+    class Meta:
+        ordering = ['-opened_at']
+
+    def __str__(self):
+        return f"Turno {self.id} — {self.opened_at.strftime('%d/%m/%Y %H:%M')}"
+
+    @property
+    def is_open(self):
+        return self.status == 'OPEN'

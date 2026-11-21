@@ -182,11 +182,11 @@
                             <a href="/" class="d21-brand">
 
                                 <span class="d21-brand-name">
-                                    DISTRITO 21
+                                    POS
                                 </span>
 
                                 <span class="d21-brand-description">
-                                    BARBER SHOP
+                                    VILCHI'S
                                 </span>
 
                             </a>
@@ -392,6 +392,18 @@
                                         <a href="{% url 'sales:return_list' %}"
                                            class="menu-link {% if '/devoluciones/' in request.path %}active{% endif %}">
                                             <span class="menu-title">Devoluciones</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'sales:shift_list' %}"
+                                            class="menu-link {% if '/pos/turnos/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Cortes</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'sales:pos' %}"
+                                        class="menu-link {% if '/pos/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Modo Venta</span>
                                         </a>
                                     </div>
 

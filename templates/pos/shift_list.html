@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}Distrito 21 | Cortes de Caja{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-8">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">Cortes de Caja</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">Historial de turnos y cuadres</span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:pos' %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-handcart fs-2"><span class="path1"></span><span class="path2"></span></i>
+                Modo Venta
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-4 mb-4">
+                    <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2x me-3"><span class="path1"></span><span class="path2"></span></i>
+                    <div class="d-flex flex-column fs-7"><span>{{ message }}</span></div>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Resumen -->
+        <div class="row g-4 mb-6">
+            <div class="col-md-6">
+                <div class="card bg-light-primary border-0 p-4">
+                    <span class="text-muted fw-semibold fs-7">Total de turnos</span>
+                    <span class="fw-bold fs-2 text-primary">{{ total_shifts }}</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-light-success border-0 p-4">
+                    <span class="text-muted fw-semibold fs-7">Turnos abiertos</span>
+                    <span class="fw-bold fs-2 text-success">{{ abiertos }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA (DESKTOP) -->
+        <div class="table-responsive d-none d-md-block">
+            <table class="table align-middle table-row-dashed fs-6 gy-5">
+                <thead>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th class="min-w-125px">Turno</th>
+                        <th class="min-w-100px text-center">Estado</th>
+                        <th class="min-w-125px">Apertura</th>
+                        <th class="min-w-125px">Cierre</th>
+                        <th class="min-w-100px text-end">Fondo</th>
+                        <th class="min-w-100px text-end">Esperado</th>
+                        <th class="min-w-100px text-end">Real</th>
+                        <th class="min-w-100px text-end">Diferencia</th>
+                        <th class="text-end min-w-100px">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 fw-semibold">
+                    {% for shift in shifts %}
+                    <tr>
+                        <td>
+                            <span class="badge badge-light-dark fw-bold fs-7">Turno #{{ shift.id }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if shift.status == 'OPEN' %}
+                                <span class="badge badge-light-success fw-bold">
+                                    <i class="ki-duotone ki-check-circle fs-7 me-1"><span class="path1"></span><span class="path2"></span></i>
+                                    Abierto
+                                </span>
+                            {% else %}
+                                <span class="badge badge-light-secondary fw-bold">Cerrado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ shift.opened_at|date:"d/m/Y H:i" }}
+                            <div class="text-muted fs-8">
+                                {{ shift.opened_by.username|default:"—" }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if shift.closed_at %}
+                                {{ shift.closed_at|date:"d/m/Y H:i" }}
+                                <div class="text-muted fs-8">
+                                    {{ shift.closed_by.username|default:"—" }}
+                                </div>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">${{ shift.opening_cash }}</td>
+                        <td class="text-end">
+                            {% if shift.expected_cash %}
+                                ${{ shift.expected_cash }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if shift.closing_cash %}
+                                ${{ shift.closing_cash }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if shift.difference is not None %}
+                                {% if shift.difference > 0 %}
+                                    <span class="fw-bold text-success">+${{ shift.difference }}</span>
+                                {% elif shift.difference < 0 %}
+                                    <span class="fw-bold text-danger">−${{ shift.difference|slice:"1:" }}</span>
+                                {% else %}
+                                    <span class="fw-bold text-muted">$0.00</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'sales:shift_detail' shift.id %}"
+                               class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm"
+                               title="Ver detalle">
+                                <i class="ki-duotone ki-eye fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center py-10 text-muted">No hay turnos registrados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MÓVIL -->
+        <div class="d-block d-md-none">
+            {% for shift in shifts %}
+            <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge badge-light-dark fw-bold fs-7">Turno #{{ shift.id }}</span>
+                    {% if shift.status == 'OPEN' %}
+                        <span class="badge badge-light-success fw-bold fs-8">Abierto</span>
+                    {% else %}
+                        <span class="badge badge-light-secondary fw-bold fs-8">Cerrado</span>
+                    {% endif %}
+                </div>
+
+                <div class="text-muted fs-8 mb-2">
+                    {{ shift.opened_at|date:"d/m/Y H:i" }}
+                    {% if shift.closed_at %} — {{ shift.closed_at|date:"d/m/Y H:i" }}{% endif %}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <span class="text-muted fs-8">Fondo</span>
+                        <div class="fw-bold">${{ shift.opening_cash }}</div>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-muted fs-8">Diferencia</span>
+                        <div class="fw-bold {% if shift.difference > 0 %}text-success{% elif shift.difference < 0 %}text-danger{% endif %}">
+                            {% if shift.difference is not None %}
+                                {% if shift.difference > 0 %}+{% endif %}${{ shift.difference }}
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{% url 'sales:shift_detail' shift.id %}" class="btn btn-sm btn-light-primary w-100">
+                    <i class="ki-duotone ki-eye fs-4 me-1"></i> Ver detalle
+                </a>
+            </div>
+            {% empty %}
+            <div class="text-center py-10 text-muted">No hay turnos registrados.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

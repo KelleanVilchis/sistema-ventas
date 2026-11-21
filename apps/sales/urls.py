@@ -28,4 +28,12 @@ urlpatterns = [
     path('expenses/create/', views.CreateExpenseView.as_view(), name='expense_create'),
     path('expenses/edit/<int:expense_id>/', views.UpdateExpenseView.as_view(), name='expense_edit'),
     path('expenses/delete/<int:expense_id>/', views.DeleteExpenseView.as_view(), name='expense_delete'),
+
+        # ─── POS / TURNO ───
+    path("pos/", views.POSView.as_view(), name="pos"),
+    path("pos/shift/open/", views.ShiftOpenView.as_view(), name="shift_open"),
+    path("pos/shift/close/", views.ShiftCloseView.as_view(), name="shift_close"),
+    # ─── TURNOS / CORTES ───
+    path("pos/turnos/", views.ShiftListView.as_view(), name="shift_list"),
+    path("pos/turnos/<int:shift_id>/", views.ShiftDetailView.as_view(), name="shift_detail"),
 ]

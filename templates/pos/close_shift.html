@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Cerrar Caja{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center py-10">
+    <div class="card shadow-lg" style="max-width: 560px; width: 100%;">
+        <div class="card-header bg-danger py-4">
+            <h3 class="card-title fw-bold text-white mb-0">🔒 Cerrar Caja</h3>
+        </div>
+        <div class="card-body p-8">
+
+            <div class="mb-4 pb-4 border-bottom">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Fondo inicial:</span>
+                    <span class="fw-bold">${{ shift.opening_cash }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">+ Ventas del turno:</span>
+                    <span class="fw-bold text-success">${{ ventas }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">− Devoluciones:</span>
+                    <span class="fw-bold text-warning">${{ devoluciones }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">− Gastos:</span>
+                    <span class="fw-bold text-danger">${{ gastos }}</span>
+                </div>
+            </div>
+
+            <div class="alert alert-light-primary d-flex justify-content-between align-items-center mb-6">
+                <span class="fw-bold fs-6">Efectivo esperado en caja:</span>
+                <span class="fw-bold fs-3 text-primary">${{ expected }}</span>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label required fw-bold">Efectivo contado (real)</label>
+                    <input type="number" name="closing_cash" step="0.01" min="0" required
+                           class="form-control form-control-lg form-control-solid text-center fs-2 fw-bold">
+                </div>
+                <div class="mb-6">
+                    <label class="form-label fw-bold">Notas (opcional)</label>
+                    <textarea name="notes" rows="2" class="form-control form-control-solid"
+                              placeholder="Observaciones del turno..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-danger btn-lg w-100">
+                    <i class="ki-duotone ki-lock-2 fs-3 me-2"><span class="path1"></span><span class="path2"></span></i>
+                    Confirmar Cierre
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

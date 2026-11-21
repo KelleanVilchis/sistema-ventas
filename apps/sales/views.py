@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from django.db.models import Exists, OuterRef, Count
+from django.db.models import Exists, OuterRef, Count, Sum
 from django.db import transaction
 from django.http import request
 from django.shortcuts import render, redirect, get_object_or_404
@@ -12,6 +12,10 @@ from .models import Combo, ComboItem, Product, Order, OrderItem, Currency, Sale,
 from apps.company.models import Company
 from apps.accounts.models import AppUser
 from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
+from django.http import JsonResponse
+from apps.sales.models import Shift
+
+
 
 class ComboListView(BasePermissionMixin, View):
     permission_required = 'sales.view_combo'
@@ -206,7 +210,7 @@ class CreateOrderView(BasePermissionMixin, View):
         try:
             currency_obj = Currency.objects.filter(id=currency_id).first() if currency_id else None
             
-            folio = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+            
 
             # Calculamos el total iniciaL
             total_amount = 0
@@ -215,7 +219,6 @@ class CreateOrderView(BasePermissionMixin, View):
                     total_amount += int(qty) * float(prc)
 
             order = Order.objects.create(
-                folio_number=folio,
                 customer=customer_name,
                 company=company,
                 currency=currency_obj,
@@ -397,6 +400,8 @@ class DeleteOrderView(BasePermissionMixin, View):
 
 
 
+from django.db.models import Sum, Q
+
 class SaleListView(BasePermissionMixin, View):
     permission_required = 'sales.view_sale'
 
@@ -410,6 +415,12 @@ class SaleListView(BasePermissionMixin, View):
             Sale.objects
             .select_related('order', 'created_by')
             .filter(company=company)
+            .annotate(
+                total_returned=Sum(
+                    'returns__total_refunded',
+                    filter=Q(returns__status='COMPLETED'),
+                )
+            )
             .order_by('-date_sale')
         )
 
@@ -709,8 +720,9 @@ class SaleReturnView(BasePermissionMixin, View):
         company = Company.objects.get(selected=True, owner=owner)
         sale = get_object_or_404(Sale, id=sale_id, company=company)
 
-        if sale.status != "SOLD":
-            messages.error(request, "Solo se pueden devolver ventas en estado Vendido.")
+        # Permitir devolución mientras la venta tenga items pendientes
+        if sale.status == "CANCELLED":
+            messages.error(request, "No se puede devolver una venta cancelada.")
             return redirect("sales:sale_list")
 
         item_ids = request.POST.getlist("item_ids[]")
@@ -732,6 +744,7 @@ class SaleReturnView(BasePermissionMixin, View):
                 )
 
                 total_refunded = Decimal("0")
+                items_devueltos = 0
 
                 for item_id, qty_str in zip(item_ids, quantities):
                     order_item = OrderItem.objects.filter(id=item_id, order=sale.order).first()
@@ -743,7 +756,8 @@ class SaleReturnView(BasePermissionMixin, View):
                     except (TypeError, ValueError):
                         continue
 
-                    if qty <= 0 or qty > order_item.quantity:
+                    # Validar contra la cantidad DISPONIBLE (no la original)
+                    if qty <= 0 or qty > order_item.available_quantity:
                         continue
 
                     unit_price = Decimal(str(order_item.price))
@@ -759,15 +773,368 @@ class SaleReturnView(BasePermissionMixin, View):
                     )
 
                     total_refunded += subtotal
+                    items_devueltos += 1
+
+                if items_devueltos == 0:
+                    # Nada válido que devolver → cancelar la SaleReturn
+                    sale_return.delete()
+                    messages.warning(request, "No se registró ninguna devolución válida.")
+                    return redirect("sales:sale_list")
 
                 sale_return.total_refunded = total_refunded
                 sale_return.save(update_fields=["total_refunded"])
 
-                sale.status = "RETURNED"
-                sale.save(update_fields=["status", "updated_at"])
+                # ─── ¿Se devolvió TODO? ───
+                # Recalcular desde la BD (porque las propiedades cachean)
+                todos_devueltos = all(
+                    item.available_quantity <= 0
+                    for item in sale.order.items.all()
+                )
 
-            messages.success(request, f"Devolución {sale_return.folio_number} registrada por ${total_refunded}.")
+                # Si es devolución total → RETURNED
+                # Si es parcial → sigue SOLD (se puede devolver más)
+                sale.status = "RETURNED" if todos_devueltos else "SOLD"
+                sale.total_amount = sale.total_amount - total_refunded   # ← RESTAR
+                sale.save(update_fields=["total_amount", "status", "updated_at"])
+            if todos_devueltos:
+                messages.success(
+                    request,
+                    f"Devolución total registrada. {sale_return.folio_number} por ${total_refunded}."
+                )
+            else:
+                messages.success(
+                    request,
+                    f"Devolución parcial registrada. {sale_return.folio_number} por ${total_refunded}. "
+                    f"La venta sigue activa."
+                )
+
         except Exception as e:
             messages.error(request, f"No se pudo registrar la devolución: {e}")
 
         return redirect("sales:sale_list")
+
+
+
+class POSView(BasePermissionMixin, View):
+    """Interfaz táctil de venta rápida."""
+    permission_required = "sales.add_sale"
+
+    def get(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        shift = Shift.objects.filter(company=company, status='OPEN').first()
+
+        if shift is None:
+            # No hay turno abierto → pedir fondo de caja
+            return render(request, 'pos/start_shift.html', {'company': company})
+
+        products = (
+            Product.objects
+            .filter(company=company)
+            .select_related('category')
+            .order_by('category__name', 'name')
+        )
+        combos = Combo.objects.filter(company=company).prefetch_related('items__product')
+
+        # Categorías únicas para los tabs
+        categories = (
+            Product.objects
+            .filter(company=company, category__isnull=False)
+            .values_list('category__id', 'category__name')
+            .distinct()
+            .order_by('category__name')
+        )
+
+        return render(request, 'pos/index.html', {
+            'company': company,
+            'shift': shift,
+            'products': products,
+            'combos': combos,
+            'categories': categories,
+        })
+
+    def post(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        shift = Shift.objects.filter(company=company, status='OPEN').first()
+        if shift is None:
+            messages.error(request, "No hay un turno abierto. Inicia el día primero.")
+            return redirect("sales:pos")
+
+        import json
+        from decimal import Decimal
+
+        try:
+            data = json.loads(request.body)
+            items = data.get('items', [])
+            payment = Decimal(str(data.get('payment', 0)))
+            customer = (data.get('customer') or '').strip() or 'Cliente general'
+
+            if not items:
+                return JsonResponse({'ok': False, 'error': 'El carrito está vacío.'}, status=400)
+
+            with transaction.atomic():
+                # 1. Crear Order (COMPLETED) + OrderItems
+                total = Decimal('0')
+                order = Order.objects.create(
+                    customer=customer,
+                    status='COMPLETED',
+                    company=company,
+                    currency=None,
+                    total_amount=0,
+                    created_by=request.user,
+                )
+
+                for item in items:
+                    item_type = item.get('type')
+                    item_id = item.get('id')
+                    qty = int(item.get('qty', 0))
+                    price = Decimal(str(item.get('price', 0)))
+
+                    if qty <= 0 or price < 0:
+                        continue
+
+                    product_obj = None
+                    combo_obj = None
+
+                    if item_type == 'product':
+                        product_obj = Product.objects.filter(id=item_id, company=company).first()
+                    elif item_type == 'combo':
+                        combo_obj = Combo.objects.filter(id=item_id, company=company).first()
+
+                    if not (product_obj or combo_obj):
+                        continue
+
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product_obj,
+                        combo=combo_obj,
+                        quantity=qty,
+                        price=price,
+                    )
+                    total += price * qty
+
+                order.total_amount = total
+                order.save(update_fields=['total_amount'])
+
+                # 2. Crear Sale (SOLD)
+                sale = Sale.objects.create(
+                    order=order,
+                    company=company,
+                    total_amount=total,
+                    status='SOLD',
+                    date_sale=timezone.now(),
+                    created_by=request.user,
+                )
+
+            change = max(Decimal('0'), payment - total)
+
+            return JsonResponse({
+                'ok': True,
+                'sale_folio': sale.folio_number,
+                'total': str(total),
+                'change': str(change),
+            })
+
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+class ShiftOpenView(BasePermissionMixin, View):
+    """Abre un turno con fondo de caja inicial."""
+    permission_required = "sales.add_sale"
+
+    def post(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        if Shift.objects.filter(company=company, status='OPEN').exists():
+            messages.info(request, "Ya hay un turno abierto.")
+            return redirect("sales:pos")
+
+        try:
+            opening_cash = Decimal(str(request.POST.get('opening_cash') or 0))
+            if opening_cash < 0:
+                raise ValueError("El fondo de caja no puede ser negativo.")
+
+            Shift.objects.create(
+                company=company,
+                opening_cash=opening_cash,
+                opened_by=request.user,
+            )
+            messages.success(request, f"Turno abierto con fondo de ${opening_cash}.")
+            return redirect("sales:pos")
+        except Exception as e:
+            messages.error(request, f"Error al abrir turno: {e}")
+            return redirect("sales:pos")
+
+
+class ShiftCloseView(BasePermissionMixin, View):
+    """Cierra el turno y calcula la diferencia de efectivo."""
+    permission_required = "sales.add_sale"
+
+    def get(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+        shift = Shift.objects.filter(company=company, status='OPEN').first()
+
+        if shift is None:
+            messages.error(request, "No hay turno abierto.")
+            return redirect("sales:pos")
+
+        # Calcular movimientos del turno
+        ventas = Sale.objects.filter(
+            company=company,
+            status='SOLD',
+            date_sale__gte=shift.opened_at,
+        ).aggregate(t=Sum('total_amount'))['t'] or Decimal('0')
+
+        devoluciones = SaleReturn.objects.filter(
+            company=company,
+            created_at__gte=shift.opened_at,
+        ).aggregate(t=Sum('total_refunded'))['t'] or Decimal('0')
+
+        gastos = Expense.objects.filter(
+            company=company,
+            date_expense__gte=shift.opened_at,
+        ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+
+        expected = shift.opening_cash + ventas - gastos   
+
+        return render(request, 'pos/close_shift.html', {
+            'shift': shift,
+            'ventas': ventas,
+            'devoluciones': devoluciones,
+            'gastos': gastos,
+            'expected': expected,
+        })
+
+    def post(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+        shift = Shift.objects.filter(company=company, status='OPEN').first()
+
+        if shift is None:
+            messages.error(request, "No hay turno abierto.")
+            return redirect("sales:pos")
+
+        try:
+            closing_cash = Decimal(str(request.POST.get('closing_cash') or 0))
+            notes = request.POST.get('notes', '')
+
+            # Recalcular esperado
+            ventas = Sale.objects.filter(
+                company=company, status='SOLD', date_sale__gte=shift.opened_at,
+            ).aggregate(t=Sum('total_amount'))['t'] or Decimal('0')
+            devoluciones = SaleReturn.objects.filter(
+                company=company, created_at__gte=shift.opened_at,
+            ).aggregate(t=Sum('total_refunded'))['t'] or Decimal('0')
+            gastos = Expense.objects.filter(
+                company=company, date_expense__gte=shift.opened_at,
+            ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+
+            expected = shift.opening_cash + ventas - gastos   
+            difference = closing_cash - expected
+
+            shift.status = 'CLOSED'
+            shift.closing_cash = closing_cash
+            shift.expected_cash = expected
+            shift.difference = difference
+            shift.notes = notes
+            shift.closed_at = timezone.now()
+            shift.closed_by = request.user
+            shift.save()
+
+            messages.success(request, f"Turno cerrado. Diferencia: ${difference}.")
+            return redirect("dashboard")
+        except Exception as e:
+            messages.error(request, f"Error al cerrar turno: {e}")
+            return redirect("sales:shift_close")
+
+
+
+class ShiftListView(BasePermissionMixin, View):
+    """Historial de turnos (cortes de caja)."""
+    permission_required = "sales.view_shift"
+
+    def get(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        shifts = (
+            Shift.objects
+            .filter(company=company)
+            .select_related('opened_by', 'closed_by')
+            .order_by('-opened_at')
+        )
+
+        # Resumen global
+        total_shifts = shifts.count()
+        abiertos = shifts.filter(status='OPEN').count()
+
+        return render(request, 'pos/shift_list.html', {
+            'shifts': shifts,
+            'total_shifts': total_shifts,
+            'abiertos': abiertos,
+        })
+
+
+class ShiftDetailView(BasePermissionMixin, View):
+    """Detalle de un turno: ventas, gastos, devoluciones y cuadre."""
+    permission_required = "sales.view_shift"
+
+    def get(self, request, shift_id):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+        shift = get_object_or_404(Shift, id=shift_id, company=company)
+
+        # Ventas del turno
+        ventas = (
+            Sale.objects
+            .filter(
+                company=company,
+                date_sale__gte=shift.opened_at,
+                date_sale__lte=shift.closed_at or timezone.now(),
+            )
+            .select_related('order', 'created_by')
+            .order_by('-date_sale')
+        )
+
+        # Gastos del turno
+        gastos = (
+            Expense.objects
+            .filter(
+                company=company,
+                date_expense__gte=shift.opened_at,
+                date_expense__lte=shift.closed_at or timezone.now(),
+            )
+            .order_by('-date_expense')
+        )
+
+        # Devoluciones del turno
+        devoluciones = (
+            SaleReturn.objects
+            .filter(
+                company=company,
+                created_at__gte=shift.opened_at,
+                created_at__lte=shift.closed_at or timezone.now(),
+            )
+            .select_related('sale', 'order')
+            .order_by('-created_at')
+        )
+
+        total_ventas = ventas.aggregate(t=Sum('total_amount'))['t'] or Decimal('0')
+        total_gastos = gastos.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        total_devoluciones = devoluciones.aggregate(t=Sum('total_refunded'))['t'] or Decimal('0')
+
+        return render(request, 'pos/shift_detail.html', {
+            'shift': shift,
+            'ventas': ventas,
+            'gastos': gastos,
+            'devoluciones': devoluciones,
+            'total_ventas': total_ventas,
+            'total_gastos': total_gastos,
+            'total_devoluciones': total_devoluciones,
+        })

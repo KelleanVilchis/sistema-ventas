@@ -60,7 +60,7 @@ class DashboardView(LoginRequiredMixin, View):
         total_devoluciones_mes = devoluciones_mes_qs.aggregate(t=Sum('total_refunded'))['t'] or Decimal('0')
 
         # ─── GANANCIA NETA ───
-        ganancia_mes = total_ventas_mes - total_gastos_mes - total_devoluciones_mes
+        ganancia_mes = total_ventas_mes - total_gastos_mes
 
         # ─── PEDIDOS PENDIENTES ───
         pedidos_pendientes = Order.objects.filter(

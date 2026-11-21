@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% block title %}Modo Venta{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    .pos-card {
+        background: #fff;
+        border: 2px solid #e4e6ef;
+        border-radius: 12px;
+        padding: 16px 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        user-select: none;
+        position: relative;
+    }
+    .pos-card:hover {
+        border-color: #009ef7;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 158, 247, 0.15);
+    }
+    .pos-card:active { transform: scale(0.97); }
+    .pos-card.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+    .pos-card.disabled::after {
+        content: 'Agotado';
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #f1416c;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: bold;
+    }
+    .pos-card-name {
+        font-weight: 700;
+        font-size: 14px;
+        color: #181c32;
+        margin-bottom: 8px;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .pos-card-price {
+        font-weight: 800;
+        font-size: 18px;
+        color: #009ef7;
+    }
+    .pos-card-category {
+        font-size: 10px;
+        color: #a1a5b7;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .cart-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #eff2f5;
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-qty-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .cart-btn {
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        border: 1px solid #e4e6ef;
+        background: white;
+        cursor: pointer;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .cart-btn:hover { background: #f5f8fa; }
+    @media (max-width: 991.98px) {
+        .pos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+        .pos-card-name { font-size: 12px; min-height: 30px; }
+        .pos-card-price { font-size: 15px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-5">
+
+    <!-- COLUMNA IZQUIERDA: PRODUCTOS -->
+    <div class="col-lg-8">
+
+        <!-- Barra superior -->
+        <div class="card mb-4">
+            <div class="card-body py-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h3 class="fw-bold mb-1">Modo Venta</h3>
+                        <span class="text-muted fs-7">
+                            Turno abierto desde {{ shift.opened_at|date:"H:i" }}
+                        </span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'sales:shift_close' %}" class="btn btn-danger">
+                            <i class="ki-duotone ki-lock-2 fs-3 me-1"><span class="path1"></span><span class="path2"></span></i>
+                            Cerrar Caja
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Búsqueda -->
+        <div class="mb-4">
+            <div class="position-relative">
+                <i class="ki-duotone ki-magnifier fs-2 position-absolute top-50 translate-middle-y ms-4">
+                    <span class="path1"></span><span class="path2"></span>
+                </i>
+                <input type="text" id="search-input"
+                       class="form-control form-control-lg form-control-solid ps-15"
+                       placeholder="Buscar producto o combo...">
+            </div>
+        </div>
+
+        <!-- Tabs de categorías -->
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button class="btn btn-sm btn-primary pos-filter" data-cat="all">Todos</button>
+            {% for cat_id, cat_name in categories %}
+                <button class="btn btn-sm btn-light pos-filter" data-cat="{{ cat_id }}">{{ cat_name }}</button>
+            {% endfor %}
+        </div>
+
+        <!-- Grid de productos -->
+        <div class="pos-grid" id="products-grid">
+            {% for p in products %}
+            <div class="pos-card {% if p.status == 'INACTIVE' %}disabled{% endif %}"
+                 data-name="{{ p.name|lower }}"
+                 data-cat="{{ p.category_id|default:'' }}"
+                 data-type="product"
+                 data-id="{{ p.id }}"
+                 data-price="{{ p.sale_price }}"
+                 onclick="addToCart(this)">
+                <div class="pos-card-category">{{ p.category.name|default:"—" }}</div>
+                <div class="pos-card-name">{{ p.name }}</div>
+                <div class="pos-card-price">${{ p.sale_price }}</div>
+            </div>
+            {% endfor %}
+
+            {% for c in combos %}
+            <div class="pos-card"
+                 data-name="{{ c.name|lower }}"
+                 data-cat=""
+                 data-type="combo"
+                 data-id="{{ c.id }}"
+                 data-price="{{ c.sale_price }}"
+                 onclick="addToCart(this)">
+                <div class="pos-card-category">Combo</div>
+                <div class="pos-card-name">{{ c.name }}</div>
+                <div class="pos-card-price">${{ c.sale_price }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+
+    <!-- COLUMNA DERECHA: CARRITO -->
+    <div class="col-lg-4">
+        <div class="card" style="position: sticky; top: 20px;">
+            <div class="card-header bg-light-primary py-4">
+                <h3 class="card-title fw-bold mb-0">🛒 Carrito</h3>
+            </div>
+
+            <div class="card-body p-4" style="max-height: 45vh; overflow-y: auto;">
+                <div id="cart-empty" class="text-center py-10 text-muted">
+                    <i class="ki-duotone ki-handcart fs-5x mb-3"><span class="path1"></span><span class="path2"></span></i>
+                    <p>Toca un producto para agregarlo</p>
+                </div>
+                <div id="cart-items"></div>
+            </div>
+
+            <div class="card-footer p-4 bg-light">
+                <div class="mb-3">
+                    <input type="text" id="customer-input" class="form-control form-control-solid"
+                           placeholder="Cliente (opcional)">
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="fw-bold fs-5">TOTAL</span>
+                    <span class="fw-bold fs-1 text-primary" id="cart-total">$0.00</span>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-light-danger" onclick="clearCart()">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg" onclick="openPayment()" id="btn-cobrar" disabled>
+                        <i class="ki-duotone ki-dollar fs-2 me-1"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                        Cobrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de pago -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">💵 Cobrar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <span class="text-muted fs-6">Total a cobrar</span>
+                    <div class="fw-bold fs-2x text-primary" id="modal-total">$0.00</div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-bold">¿Pagó con cuánto?</label>
+                    <input type="number" step="0.01" min="0" id="payment-input"
+                           class="form-control form-control-lg form-control-solid text-center fs-2 fw-bold">
+                </div>
+                <div class="alert alert-light-success d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Cambio:</span>
+                    <span class="fw-bold fs-2 text-success" id="modal-change">$0.00</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success btn-lg" onclick="confirmSale()" id="btn-confirm-sale">
+                    Confirmar Venta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const cart = {};  // { key: {type, id, name, price, qty} }
+    const csrfToken = '{{ csrf_token }}';
+    let currentTotal = 0;
+
+    function addToCart(el) {
+        const type = el.dataset.type;
+        const id = el.dataset.id;
+        const name = el.querySelector('.pos-card-name').textContent.trim();
+        const price = parseFloat(el.dataset.price);
+        const key = type + '-' + id;
+
+        if (cart[key]) {
+            cart[key].qty += 1;
+        } else {
+            cart[key] = { type, id, name, price, qty: 1 };
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cart-items');
+        const empty = document.getElementById('cart-empty');
+        const items = Object.values(cart);
+
+        if (items.length === 0) {
+            container.innerHTML = '';
+            empty.style.display = 'block';
+            document.getElementById('cart-total').textContent = '$0.00';
+            document.getElementById('btn-cobrar').disabled = true;
+            currentTotal = 0;
+            return;
+        }
+
+        empty.style.display = 'none';
+        container.innerHTML = items.map(item => {
+            const key = item.type + '-' + item.id;
+            return `
+                <div class="cart-item">
+                    <div class="flex-grow-1">
+                        <div class="fw-bold fs-7">${item.name}</div>
+                        <div class="text-muted fs-8">$${item.price.toFixed(2)} c/u</div>
+                        <button type="button" class="btn btn-xs btn-link p-0 text-warning fs-8"
+                                onclick="editPrice('${key}')">
+                            ✏️ Editar precio
+                        </button>
+                    </div>
+                    <div class="cart-qty-controls">
+                        <button type="button" class="cart-btn" onclick="changeQty('${key}', -1)">−</button>
+                        <span class="fw-bold fs-6" style="min-width: 24px; text-align: center;">${item.qty}</span>
+                        <button type="button" class="cart-btn" onclick="changeQty('${key}', 1)">+</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        currentTotal = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        document.getElementById('cart-total').textContent = '$' + currentTotal.toFixed(2);
+        document.getElementById('btn-cobrar').disabled = false;
+    }
+
+    function changeQty(key, delta) {
+        cart[key].qty += delta;
+        if (cart[key].qty <= 0) delete cart[key];
+        renderCart();
+    }
+
+    function editPrice(key) {
+        const newPrice = prompt('Nuevo precio para ' + cart[key].name + ':', cart[key].price);
+        if (newPrice === null) return;
+        const parsed = parseFloat(newPrice);
+        if (isNaN(parsed) || parsed < 0) {
+            alert('Precio inválido');
+            return;
+        }
+        cart[key].price = parsed;
+        renderCart();
+    }
+
+    function clearCart() {
+        if (Object.keys(cart).length === 0) return;
+        if (!confirm('¿Vaciar el carrito?')) return;
+        for (const k in cart) delete cart[k];
+        renderCart();
+    }
+
+    function openPayment() {
+        if (currentTotal <= 0) return;
+        document.getElementById('modal-total').textContent = '$' + currentTotal.toFixed(2);
+        document.getElementById('payment-input').value = currentTotal.toFixed(2);
+        document.getElementById('modal-change').textContent = '$0.00';
+        new bootstrap.Modal(document.getElementById('paymentModal')).show();
+    }
+
+    document.getElementById('payment-input')?.addEventListener('input', function() {
+        const paid = parseFloat(this.value) || 0;
+        const change = Math.max(0, paid - currentTotal);
+        document.getElementById('modal-change').textContent = '$' + change.toFixed(2);
+    });
+
+    async function confirmSale() {
+        const payment = parseFloat(document.getElementById('payment-input').value) || 0;
+        if (payment < currentTotal) {
+            alert('El pago es menor al total.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-confirm-sale');
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+
+        try {
+            const items = Object.values(cart).map(i => ({
+                type: i.type,
+                id: i.id,
+                qty: i.qty,
+                price: i.price,
+            }));
+
+            const res = await fetch('{% url "sales:pos" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    items: items,
+                    payment: payment,
+                    customer: document.getElementById('customer-input').value,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (data.ok) {
+                // Cerrar modal, limpiar carrito, mostrar toast
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                for (const k in cart) delete cart[k];
+                renderCart();
+                document.getElementById('customer-input').value = '';
+
+                // Toast éxito
+                alert(`✅ Venta ${data.sale_folio}\nTotal: $${data.total}\nCambio: $${data.change}`);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (e) {
+            alert('Error de conexión: ' + e);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Venta';
+        }
+    }
+
+    // Búsqueda
+    document.getElementById('search-input')?.addEventListener('input', function() {
+        const q = this.value.toLowerCase().trim();
+        document.querySelectorAll('.pos-card').forEach(card => {
+            const name = card.dataset.name;
+            card.style.display = (!q || name.includes(q)) ? '' : 'none';
+        });
+    });
+
+    // Filtros por categoría
+    document.querySelectorAll('.pos-filter').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.pos-filter').forEach(b => {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-light');
+            });
+            this.classList.remove('btn-light');
+            this.classList.add('btn-primary');
+
+            const cat = this.dataset.cat;
+            document.querySelectorAll('.pos-card').forEach(card => {
+                if (cat === 'all' || card.dataset.cat === cat) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
