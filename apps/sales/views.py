@@ -159,10 +159,18 @@ class OrderListView(BasePermissionMixin, View):
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        sold_sales = Sale.objects.filter(order=OuterRef("pk"),status="SOLD")
-        orders = (Order.objects.filter(company=company).select_related("company", "currency").annotate(is_sold=Exists(sold_sales)).order_by("-created_at") )
-        return render(request, "sales/order/index.html", {"orders": orders})
 
+        # Cualquier venta (SOLD, RETURNED, CANCELLED) bloquea la re-venta
+        any_sale = Sale.objects.filter(order=OuterRef("pk"))
+
+        orders = (
+            Order.objects
+            .filter(company=company)
+            .select_related("company", "currency")
+            .annotate(is_sold=Exists(any_sale))   # ← nombre igual, lógica distinta
+            .order_by("-created_at")
+        )
+        return render(request, "sales/order/index.html", {"orders": orders})
 
 class CreateOrderView(BasePermissionMixin, View):
     permission_required = 'sales.add_order'
@@ -285,6 +293,16 @@ class UpdateOrderView(BasePermissionMixin, View):
         company = Company.objects.get(selected=True, owner=owner)
         customer_name = request.POST.get('customer')
 
+        item_types = request.POST.getlist('item_types[]')
+        item_ids = request.POST.getlist('item_ids[]')
+        quantities = request.POST.getlist('quantities[]')
+        prices = request.POST.getlist('prices[]')
+
+        # ─── VALIDACIÓN: pedido no vacío ───
+        if not item_ids:
+            messages.error(request, "El pedido debe tener al menos un producto.")
+            return redirect('sales:order_edit', order_id=order.id)
+
         try:
             order.customer = customer_name
             order.company = company
@@ -293,11 +311,6 @@ class UpdateOrderView(BasePermissionMixin, View):
 
             # Recreamos los ítems
             order.items.all().delete()
-            
-            item_types = request.POST.getlist('item_types[]')
-            item_ids = request.POST.getlist('item_ids[]')
-            quantities = request.POST.getlist('quantities[]')
-            prices = request.POST.getlist('prices[]')
 
             total_amount = 0
             for item_type, item_id, qty, prc in zip(item_types, item_ids, quantities, prices):
@@ -360,8 +373,12 @@ class OrderSellView(BasePermissionMixin, View):
             messages.error(request, f"El pedido {order.folio_number} debe completarse antes de venderse.")
             return redirect("sales:order_list")
 
-        if order.sales.filter(status="SOLD").exists():
-            messages.info(request, f"El pedido {order.folio_number} ya tiene una venta registrada.")
+        if order.sales.exists():
+            messages.info(
+                request,
+                f"El pedido {order.folio_number} ya tuvo una venta registrada. "
+                f"Crea un pedido nuevo si necesitas revenderlo."
+            )
             return redirect("sales:order_list")
 
         try:
