@@ -427,17 +427,12 @@ class SaleListView(BasePermissionMixin, View):
         company = Company.objects.get(selected=True, owner=owner)
 
         status_filter = request.GET.get('status', 'ALL')
+        method_filter = request.GET.get('method', 'ALL')
 
         sales_qs = (
             Sale.objects
             .select_related('order', 'created_by')
             .filter(company=company)
-            .annotate(
-                total_returned=Sum(
-                    'returns__total_refunded',
-                    filter=Q(returns__status='COMPLETED'),
-                )
-            )
             .order_by('-date_sale')
         )
 
@@ -446,6 +441,12 @@ class SaleListView(BasePermissionMixin, View):
         else:
             status_filter = 'ALL'
 
+        if method_filter in ('CASH_MXN', 'CASH_USD', 'MIXED', 'TRANSFER'):
+            sales_qs = sales_qs.filter(payment_method=method_filter)
+        else:
+            method_filter = 'ALL'
+
+        # Conteos por estado
         counts_qs = (
             Sale.objects
             .filter(company=company)
@@ -455,10 +456,20 @@ class SaleListView(BasePermissionMixin, View):
         counts = {row['status']: row['n'] for row in counts_qs}
         counts['ALL'] = sum(counts.values()) if counts else 0
 
+        # Totales por método de pago (sobre el listado filtrado)
+        totals = sales_qs.aggregate(
+            total_mxn=Sum('paid_mxn'),
+            total_usd=Sum('paid_usd'),
+            total=Sum('total_amount'),
+        )
+
         return render(request, 'sales/sales/sale_list.html', {
             'sales': sales_qs,
             'status_filter': status_filter,
+            'method_filter': method_filter,
             'counts': counts,
+            'totals': totals,
+            'company': company,
         })
 
 

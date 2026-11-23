@@ -75,7 +75,21 @@ class DashboardView(LoginRequiredMixin, View):
             .select_related('order', 'created_by')
             .order_by('-created_at')[:5]
         )
+        # Desglose por método de pago (mes actual)
+        pagos_mes = (
+            ventas_mes_qs
+            .values('payment_method')
+            .annotate(
+                total=Sum('total_amount'),
+                cantidad=Count('id'),
+                total_mxn=Sum('paid_mxn'),
+                total_usd=Sum('paid_usd'),
+            )
+        )
 
+        # Totales separados
+        total_mxn_mes = ventas_mes_qs.aggregate(t=Sum('paid_mxn'))['t'] or Decimal('0')
+        total_usd_mes = ventas_mes_qs.aggregate(t=Sum('paid_usd'))['t'] or Decimal('0')
         context = {
             'company': company,
 
@@ -88,6 +102,10 @@ class DashboardView(LoginRequiredMixin, View):
             'total_devoluciones_mes': total_devoluciones_mes,
             'ganancia_mes': ganancia_mes,
 
+            'pagos_mes': pagos_mes,
+            'total_mxn_mes': total_mxn_mes,
+            'total_usd_mes': total_usd_mes,
+            
             'gastos_por_tipo': gastos_por_tipo,
             'pedidos_pendientes': pedidos_pendientes,
             'ventas_recientes': ventas_recientes,

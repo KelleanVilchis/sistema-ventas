@@ -10,8 +10,8 @@
             <span class="text-muted mt-1 fw-semibold fs-7">Control de transacciones e ingresos comerciales</span>
         </h3>
         <div class="card-toolbar">
-            <a href="{% url 'sales:sale_create' %}" class="btn btn-sm btn-primary">
-                <i class="ki-duotone ki-plus fs-2"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i> Nueva Venta
+            <a href="{% url 'sales:pos' %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-handcart fs-2"><span class="path1"></span><span class="path2"></span></i> Modo Venta
             </a>
         </div>
     </div>
@@ -27,32 +27,69 @@
         {% endif %}
 
         <!-- ─── FILTROS POR ESTADO ─── -->
-        <div class="d-flex flex-wrap gap-2 mb-5">
-            <a href="?status=ALL"
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="?status=ALL&method={{ method_filter }}"
                class="btn btn-sm {% if status_filter == 'ALL' or not status_filter %}btn-primary{% else %}btn-light{% endif %}">
-                <i class="ki-duotone ki-element-11 fs-4 me-1"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span></i>
                 Todas <span class="badge badge-light ms-1">{{ counts.ALL }}</span>
             </a>
-            <a href="?status=SOLD"
+            <a href="?status=SOLD&method={{ method_filter }}"
                class="btn btn-sm {% if status_filter == 'SOLD' %}btn-success{% else %}btn-light{% endif %}">
-                <i class="ki-duotone ki-check-circle fs-4 me-1"><span class="path1"></span><span class="path2"></span></i>
                 Vendidas <span class="badge badge-light ms-1">{{ counts.SOLD }}</span>
             </a>
-            <a href="?status=RETURNED"
+            <a href="?status=RETURNED&method={{ method_filter }}"
                class="btn btn-sm {% if status_filter == 'RETURNED' %}btn-warning{% else %}btn-light{% endif %}">
-                <i class="ki-duotone ki-arrows-circle fs-4 me-1"><span class="path1"></span><span class="path2"></span></i>
                 Devueltas <span class="badge badge-light ms-1">{{ counts.RETURNED }}</span>
             </a>
-            <a href="?status=CANCELLED"
+            <a href="?status=CANCELLED&method={{ method_filter }}"
                class="btn btn-sm {% if status_filter == 'CANCELLED' %}btn-danger{% else %}btn-light{% endif %}">
-                <i class="ki-duotone ki-cross-circle fs-4 me-1"><span class="path1"></span><span class="path2"></span></i>
                 Canceladas <span class="badge badge-light ms-1">{{ counts.CANCELLED }}</span>
             </a>
-            <a href="?status=PENDING"
-               class="btn btn-sm {% if status_filter == 'PENDING' %}btn-info{% else %}btn-light{% endif %}">
-                <i class="ki-duotone ki-time fs-4 me-1"><span class="path1"></span><span class="path2"></span></i>
-                En espera <span class="badge badge-light ms-1">{{ counts.PENDING }}</span>
+        </div>
+
+        <!-- ─── FILTROS POR MÉTODO DE PAGO ─── -->
+        <div class="d-flex flex-wrap gap-2 mb-5">
+            <a href="?status={{ status_filter }}&method=ALL"
+               class="btn btn-sm {% if method_filter == 'ALL' or not method_filter %}btn-dark{% else %}btn-light{% endif %}">
+                Todos los métodos
             </a>
+            <a href="?status={{ status_filter }}&method=CASH_MXN"
+               class="btn btn-sm {% if method_filter == 'CASH_MXN' %}btn-primary{% else %}btn-light{% endif %}">
+                💵 Efectivo MXN
+            </a>
+            <a href="?status={{ status_filter }}&method=CASH_USD"
+               class="btn btn-sm {% if method_filter == 'CASH_USD' %}btn-success{% else %}btn-light{% endif %}">
+                💲 Efectivo USD
+            </a>
+            <a href="?status={{ status_filter }}&method=MIXED"
+               class="btn btn-sm {% if method_filter == 'MIXED' %}btn-warning{% else %}btn-light{% endif %}">
+                🔀 Mixto
+            </a>
+            <a href="?status={{ status_filter }}&method=TRANSFER"
+               class="btn btn-sm {% if method_filter == 'TRANSFER' %}btn-info{% else %}btn-light{% endif %}">
+                🏦 Transferencia
+            </a>
+        </div>
+
+        <!-- ─── TOTALES DEL LISTADO ─── -->
+        <div class="row g-3 mb-5">
+            <div class="col-md-4">
+                <div class="card bg-light-success border-0 p-3">
+                    <span class="text-muted fs-8 fw-semibold">Total ventas (MXN)</span>
+                    <span class="fw-bold fs-3 text-success">${{ totals.total|default:"0.00"|floatformat:2 }}</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light-primary border-0 p-3">
+                    <span class="text-muted fs-8 fw-semibold">Cobrado en MXN</span>
+                    <span class="fw-bold fs-3 text-primary">${{ totals.total_mxn|default:"0.00"|floatformat:2 }}</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light-info border-0 p-3">
+                    <span class="text-muted fs-8 fw-semibold">Cobrado en USD</span>
+                    <span class="fw-bold fs-3 text-info">${{ totals.total_usd|default:"0.00"|floatformat:2 }} USD</span>
+                </div>
+            </div>
         </div>
 
         <!-- TABLA (DESKTOP) -->
@@ -60,12 +97,13 @@
             <table class="table align-middle table-row-dashed fs-6 gy-5">
                 <thead>
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th class="min-w-125px">Folio Venta</th>
-                        <th class="min-w-125px">Pedido Base</th>
+                        <th class="min-w-125px">Folio</th>
+                        <th class="min-w-100px">Pedido</th>
                         <th class="min-w-150px">Cliente</th>
                         <th class="min-w-100px text-center">Estado</th>
-                        <th class="min-w-100px text-end">Monto Total</th>
-                        <th class="min-w-125px">Fecha de Venta</th>
+                        <th class="min-w-125px">Pago</th>
+                        <th class="min-w-125px text-end">Monto</th>
+                        <th class="min-w-125px">Fecha</th>
                         <th class="text-end min-w-150px">Acciones</th>
                     </tr>
                 </thead>
@@ -75,9 +113,7 @@
                         <td><span class="badge badge-light-primary fw-bold fs-7">{{ sale.folio_number }}</span></td>
                         <td><span class="badge badge-light-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
                         <td>
-                            <div class="d-flex align-items-center">
-                                <span class="text-gray-800 fw-bold">{{ sale.order.customer }}</span>
-                            </div>
+                            <span class="text-gray-800 fw-bold">{{ sale.order.customer }}</span>
                         </td>
                         <td class="text-center">
                             {% if sale.status == 'SOLD' %}
@@ -90,11 +126,31 @@
                                 <span class="badge badge-light-info fw-bold">En espera</span>
                             {% endif %}
                         </td>
-                        <td class="text-end fw-bold text-success fs-6">${{ sale.total_amount }}</td>
+                        <td>
+                            {% if sale.payment_method == 'CASH_MXN' %}
+                                <span class="badge badge-light-primary fs-8">💵 MXN</span>
+                            {% elif sale.payment_method == 'CASH_USD' %}
+                                <span class="badge badge-light-success fs-8">💲 USD</span>
+                            {% elif sale.payment_method == 'MIXED' %}
+                                <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
+                            {% else %}
+                                <span class="badge badge-light-info fs-8">🏦 Transf.</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="fw-bold text-success fs-6">${{ sale.total_amount }}</div>
+                            {% if sale.paid_usd > 0 %}
+                                <div class="text-muted fs-8">
+                                    {{ sale.paid_usd }} USD @ ${{ sale.exchange_rate }}
+                                </div>
+                            {% endif %}
+                            {% if sale.paid_mxn > 0 and sale.paid_usd > 0 %}
+                                <div class="text-muted fs-8">+ ${{ sale.paid_mxn }} MXN</div>
+                            {% endif %}
+                        </td>
                         <td>{{ sale.date_sale|date:"d/m/Y H:i" }}</td>
                         <td class="text-end">
-
-                            {# ─── Devolución (solo si SOLD) ─── #}
+                            {# ─── Devolución ─── #}
                             {% if sale.status == 'SOLD' %}
                                 <button type="button"
                                         class="btn btn-icon btn-bg-light btn-active-color-warning btn-sm me-1 text-warning"
@@ -105,20 +161,18 @@
                                 </button>
                             {% elif sale.status == 'RETURNED' %}
                                 <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
-                                      title="Esta venta ya fue devuelta"
+                                      title="Venta devuelta completamente"
                                       aria-disabled="true"
                                       style="pointer-events: none; opacity: .55;">
                                     <i class="ki-duotone ki-arrows-circle fs-3 text-muted"><span class="path1"></span><span class="path2"></span></i>
                                 </span>
                             {% endif %}
 
-                            {# ─── Editar (bloqueado si RETURNED o CANCELLED) ─── #}
+                            {# ─── Editar ─── #}
                             {% if sale.status == 'RETURNED' or sale.status == 'CANCELLED' %}
-                                <span class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 disabled"
-                                      title="No se puede editar una venta {% if sale.status == 'RETURNED' %}devuelta{% else %}cancelada{% endif %}"
-                                      aria-disabled="true"
+                                <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
                                       style="pointer-events: none; opacity: .55;">
-                                    <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
+                                    <i class="ki-duotone ki-pencil fs-3 text-muted"><span class="path1"></span><span class="path2"></span></i>
                                 </span>
                             {% else %}
                                 <a href="{% url 'sales:sale_edit' sale.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
@@ -126,13 +180,11 @@
                                 </a>
                             {% endif %}
 
-                            {# ─── Eliminar (bloqueado si RETURNED o CANCELLED) ─── #}
+                            {# ─── Eliminar ─── #}
                             {% if sale.status == 'RETURNED' or sale.status == 'CANCELLED' %}
-                                <span class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm disabled"
-                                      title="No se puede eliminar una venta {% if sale.status == 'RETURNED' %}devuelta{% else %}cancelada{% endif %}"
-                                      aria-disabled="true"
+                                <span class="btn btn-icon btn-bg-light btn-sm disabled"
                                       style="pointer-events: none; opacity: .55;">
-                                    <i class="ki-duotone ki-trash fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                                    <i class="ki-duotone ki-trash fs-3 text-muted"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
                                 </span>
                             {% else %}
                                 <form id="delete-form-sale-{{ sale.id }}" action="{% url 'sales:sale_delete' sale.id %}" method="POST" class="d-inline">
@@ -147,7 +199,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-10 text-muted">No hay ventas registradas con este filtro.</td></tr>
+                    <tr><td colspan="8" class="text-center py-10 text-muted">No hay ventas registradas con estos filtros.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -159,47 +211,27 @@
             <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="badge badge-light-primary fw-bold fs-7">{{ sale.folio_number }}</span>
-                    <div>
-
-                        {# ─── Devolución (móvil) ─── #}
+                    <div class="d-flex gap-1">
                         {% if sale.status == 'SOLD' %}
                             <button type="button"
-                                    class="btn btn-icon btn-bg-light btn-active-color-warning btn-sm me-1 text-warning"
-                                    title="Registrar devolución"
+                                    class="btn btn-icon btn-bg-light btn-active-color-warning btn-sm text-warning"
                                     data-bs-toggle="modal"
                                     data-bs-target="#returnModal-{{ sale.id }}">
                                 <i class="ki-duotone ki-arrows-circle fs-4"><span class="path1"></span><span class="path2"></span></i>
                             </button>
-                        {% elif sale.status == 'RETURNED' %}
-                            <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
-                                  title="Esta venta ya fue devuelta"
-                                  aria-disabled="true"
-                                  style="pointer-events: none; opacity: .55;">
-                                <i class="ki-duotone ki-arrows-circle fs-4 text-muted"><span class="path1"></span><span class="path2"></span></i>
-                            </span>
                         {% endif %}
-
-                        {# ─── Editar (móvil) ─── #}
                         {% if sale.status == 'RETURNED' or sale.status == 'CANCELLED' %}
-                            <span class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1 disabled"
-                                  title="No se puede editar una venta {% if sale.status == 'RETURNED' %}devuelta{% else %}cancelada{% endif %}"
-                                  aria-disabled="true"
-                                  style="pointer-events: none; opacity: .55;">
-                                <i class="ki-duotone ki-pencil fs-4"><span class="path1"></span><span class="path2"></span></i>
+                            <span class="btn btn-icon btn-bg-light btn-sm disabled" style="pointer-events:none; opacity:.55;">
+                                <i class="ki-duotone ki-pencil fs-4 text-muted"><span class="path1"></span><span class="path2"></span></i>
                             </span>
                         {% else %}
-                            <a href="{% url 'sales:sale_edit' sale.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
+                            <a href="{% url 'sales:sale_edit' sale.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm">
                                 <i class="ki-duotone ki-pencil fs-4"><span class="path1"></span><span class="path2"></span></i>
                             </a>
                         {% endif %}
-
-                        {# ─── Eliminar (móvil) ─── #}
                         {% if sale.status == 'RETURNED' or sale.status == 'CANCELLED' %}
-                            <span class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm disabled"
-                                  title="No se puede eliminar una venta {% if sale.status == 'RETURNED' %}devuelta{% else %}cancelada{% endif %}"
-                                  aria-disabled="true"
-                                  style="pointer-events: none; opacity: .55;">
-                                <i class="ki-duotone ki-trash fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
+                            <span class="btn btn-icon btn-bg-light btn-sm disabled" style="pointer-events:none; opacity:.55;">
+                                <i class="ki-duotone ki-trash fs-4 text-muted"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
                             </span>
                         {% else %}
                             <button type="button" class="btn btn-icon btn-bg-light btn-active-color-danger btn-sm"
@@ -218,20 +250,30 @@
                     <span class="fw-bold text-success fs-5">${{ sale.total_amount }}</span>
                 </div>
 
+                <div class="d-flex gap-1 flex-wrap mb-2">
+                    {% if sale.payment_method == 'CASH_MXN' %}
+                        <span class="badge badge-light-primary fs-8">💵 MXN</span>
+                    {% elif sale.payment_method == 'CASH_USD' %}
+                        <span class="badge badge-light-success fs-8">💲 USD</span>
+                    {% elif sale.payment_method == 'MIXED' %}
+                        <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
+                    {% else %}
+                        <span class="badge badge-light-info fs-8">🏦 Transferencia</span>
+                    {% endif %}
+                    {% if sale.paid_usd > 0 %}
+                        <span class="badge badge-light-dark fs-8">{{ sale.paid_usd }} USD @ ${{ sale.exchange_rate }}</span>
+                    {% endif %}
+                </div>
+
                 <div class="d-flex justify-content-between align-items-center my-2">
                     <span class="badge {% if sale.status == 'SOLD' %}badge-light-success{% elif sale.status == 'RETURNED' %}badge-light-warning{% elif sale.status == 'CANCELLED' %}badge-light-danger{% else %}badge-light-info{% endif %} fw-bold fs-8">
                         {{ sale.get_status_display }}
                     </span>
-                </div>
-
-                <div class="separator separator-dashed my-2"></div>
-                <div class="d-flex justify-content-between text-muted fs-8">
-                    <span>Pedido: {{ sale.order.folio_number|default:sale.order.id }}</span>
-                    <span>Fecha: {{ sale.date_sale|date:"d/m/Y H:i" }}</span>
+                    <span class="text-muted fs-8">{{ sale.date_sale|date:"d/m/Y H:i" }}</span>
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-10 text-muted">No hay ventas registradas con este filtro.</div>
+            <div class="text-center py-10 text-muted">No hay ventas registradas con estos filtros.</div>
             {% endfor %}
         </div>
     </div>
@@ -245,20 +287,13 @@
 <div class="modal fade" id="returnModal-{{ sale.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <form id="return-form-{{ sale.id }}"
-                  action="{% url 'sales:sale_return' sale.id %}"
-                  method="POST">
+            <form id="return-form-{{ sale.id }}" action="{% url 'sales:sale_return' sale.id %}" method="POST">
                 {% csrf_token %}
-
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        Devolución — Venta <strong>{{ sale.folio_number }}</strong>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <h5 class="modal-title">Devolución — Venta <strong>{{ sale.folio_number }}</strong></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-
                 <div class="modal-body">
-
                     {% if sale.order.items.all %}
                     <div class="table-responsive">
                         <table class="table align-middle table-row-dashed fs-7 gy-3">
@@ -273,76 +308,57 @@
                             </thead>
                             <tbody>
                                 {% for item in sale.order.items.all %}
-{% if item.available_quantity > 0 %}
-<tr>
-    <td>
-        <input type="checkbox"
-               class="form-check-input return-checkbox"
-               data-sale-id="{{ sale.id }}"
-               data-price="{{ item.price }}"
-               name="item_ids[]"
-               value="{{ item.id }}">
-    </td>
-    <td>
-        <span class="fw-bold text-gray-800">
-            {% if item.product %}
-                {{ item.product.name }}
-            {% elif item.combo %}
-                {{ item.combo.name }}
-                <span class="badge badge-light-info ms-2 fs-8">Combo</span>
-            {% endif %}
-        </span>
-        <div class="text-muted fs-8">
-            {% if item.returned_quantity > 0 %}
-                Original: {{ item.quantity }} ·
-                <span class="badge badge-light-warning fs-8">−{{ item.returned_quantity }} devueltos</span> ·
-                Disponibles: {{ item.available_quantity }}
-            {% else %}
-                Cant. original: {{ item.quantity }}
-            {% endif %}
-        </div>
-    </td>
-    <td class="text-end">${{ item.price }}</td>
-    <td class="text-center">
-        <input type="number"
-               class="form-control form-control-sm form-control-solid text-center return-qty"
-               data-sale-id="{{ sale.id }}"
-               name="quantities[]"
-               value="{{ item.available_quantity }}"
-               min="0"
-               max="{{ item.available_quantity }}"
-               disabled>
-    </td>
-    <td class="text-end fw-bold return-subtotal" data-sale-id="{{ sale.id }}">
-        $0.00
-    </td>
-</tr>
-{% endif %}
-{% endfor %}
+                                {% if item.available_quantity > 0 %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="form-check-input return-checkbox"
+                                               data-sale-id="{{ sale.id }}"
+                                               data-price="{{ item.price }}"
+                                               name="item_ids[]" value="{{ item.id }}">
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-gray-800">
+                                            {% if item.product %}{{ item.product.name }}
+                                            {% elif item.combo %}{{ item.combo.name }}
+                                                <span class="badge badge-light-info ms-2 fs-8">Combo</span>
+                                            {% endif %}
+                                        </span>
+                                        <div class="text-muted fs-8">
+                                            {% if item.returned_quantity > 0 %}
+                                                Original: {{ item.quantity }} ·
+                                                <span class="badge badge-light-warning fs-8">−{{ item.returned_quantity }} devueltos</span> ·
+                                                Disponibles: {{ item.available_quantity }}
+                                            {% else %}
+                                                Cant. original: {{ item.quantity }}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-end">${{ item.price }}</td>
+                                    <td class="text-center">
+                                        <input type="number" class="form-control form-control-sm form-control-solid text-center return-qty"
+                                               data-sale-id="{{ sale.id }}" name="quantities[]"
+                                               value="{{ item.available_quantity }}" min="0" max="{{ item.available_quantity }}" disabled>
+                                    </td>
+                                    <td class="text-end fw-bold return-subtotal" data-sale-id="{{ sale.id }}">$0.00</td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label fw-semibold fs-7">Motivo (opcional)</label>
-                        <textarea name="reason" rows="2"
-                                  class="form-control form-control-solid"
-                                  placeholder="Ej: Producto defectuoso, cliente insatisfecho..."></textarea>
+                        <textarea name="reason" rows="2" class="form-control form-control-solid"
+                                  placeholder="Ej: Producto defectuoso..."></textarea>
                     </div>
-
                     <div class="d-flex justify-content-end align-items-center bg-light-primary rounded p-4">
                         <span class="fw-semibold text-gray-700 me-3">Total a devolver:</span>
                         <span class="fw-bold fs-3 text-warning" id="return-total-{{ sale.id }}">$0.00</span>
                     </div>
-
                     {% else %}
-                    <div class="alert alert-warning mb-0">
-                        Esta venta no tiene productos registrados en el pedido.
-                    </div>
+                    <div class="alert alert-warning mb-0">Esta venta no tiene productos pendientes de devolución.</div>
                     {% endif %}
-
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-warning">
@@ -350,7 +366,6 @@
                         Confirmar devolución
                     </button>
                 </div>
-
             </form>
         </div>
     </div>
@@ -362,47 +377,31 @@
     function confirmDelete(formId, itemName) {
         Swal.fire({
             text: "¿Eliminar la venta '" + itemName + "'?",
-            icon: "warning",
-            showCancelButton: true,
-            buttonsStyling: false,
-            confirmButtonText: "Sí, eliminar",
-            cancelButtonText: "Cancelar",
+            icon: "warning", showCancelButton: true, buttonsStyling: false,
+            confirmButtonText: "Sí, eliminar", cancelButtonText: "Cancelar",
             customClass: { confirmButton: "btn btn-danger btn-sm", cancelButton: "btn btn-active-light btn-sm" }
         }).then(function (result) {
-            if (result.value) {
-                document.getElementById(formId).submit();
-            }
+            if (result.value) document.getElementById(formId).submit();
         });
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-
-        // Al marcar/desmarcar checkbox, habilitar/deshabilitar cantidad
         document.querySelectorAll('.return-checkbox').forEach(function (cb) {
             cb.addEventListener('change', function () {
                 const row = this.closest('tr');
                 const qty = row.querySelector('.return-qty');
-
-                if (this.checked) {
-                    qty.disabled = false;
-                    qty.focus();
-                } else {
-                    qty.disabled = true;
-                    qty.value = qty.max;
-                }
+                if (this.checked) { qty.disabled = false; qty.focus(); }
+                else { qty.disabled = true; qty.value = qty.max; }
                 recalcReturnTotal(this.dataset.saleId);
             });
         });
 
-        // Al cambiar la cantidad, recalcular subtotal
         document.querySelectorAll('.return-qty').forEach(function (input) {
             input.addEventListener('input', function () {
                 const max = parseInt(this.max) || 0;
                 let val = parseInt(this.value) || 0;
-
                 if (val > max) { this.value = max; val = max; }
-                if (val < 0)   { this.value = 0; val = 0; }
-
+                if (val < 0) { this.value = 0; val = 0; }
                 recalcReturnTotal(this.dataset.saleId);
             });
         });
@@ -411,15 +410,12 @@
     function recalcReturnTotal(saleId) {
         const form = document.getElementById('return-form-' + saleId);
         if (!form) return;
-
         let total = 0;
-
         form.querySelectorAll('tbody tr').forEach(function (row) {
             const cb = row.querySelector('.return-checkbox');
             const qty = row.querySelector('.return-qty');
             const subtotalCell = row.querySelector('.return-subtotal');
             if (!cb || !qty || !subtotalCell) return;
-
             if (cb.checked) {
                 const price = parseFloat(cb.dataset.price) || 0;
                 const quantity = parseInt(qty.value) || 0;
@@ -430,7 +426,6 @@
                 subtotalCell.textContent = '$0.00';
             }
         });
-
         const totalEl = document.getElementById('return-total-' + saleId);
         if (totalEl) totalEl.textContent = '$' + total.toFixed(2);
     }
