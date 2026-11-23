@@ -11,6 +11,10 @@ class Company(models.Model):
     description = models.TextField(blank=True, null=True)
     selected = models.BooleanField(default=False)
     owner = models.ForeignKey(AppUser, on_delete=models.PROTECT, related_name='owned_companies')
+    usd_exchange_rate = models.DecimalField(
+        max_digits=10, decimal_places=4, default=17.50,
+        help_text="Tipo de cambio USD → MXN actual"
+    )
     created_by = models.ForeignKey(AppUser, on_delete=models.PROTECT, null=True, related_name='created_companies')
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)

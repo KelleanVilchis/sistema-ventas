@@ -111,6 +111,13 @@ class Sale(models.Model):
         ('CANCELLED', 'CANCELADO'),
         ('PENDING', 'EN ESPERA')
     ]
+    PAYMENT_CHOICES = [
+        ('CASH_MXN', 'Efectivo MXN'),
+        ('CASH_USD', 'Efectivo USD'),
+        ('MIXED', 'Mixto (MXN + USD)'),
+        ('TRANSFER', 'Transferencia'),
+    ]
+
     folio_number = models.CharField("folio", max_length=40, unique=True, blank=True, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='sales')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -120,6 +127,17 @@ class Sale(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, related_name='created_sales')
+
+    # ─── PAGO ───
+    payment_method = models.CharField(
+        max_length=15, choices=PAYMENT_CHOICES, default='CASH_MXN'
+    )
+    paid_mxn = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    paid_usd = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    exchange_rate = models.DecimalField(
+        max_digits=10, decimal_places=4, default=0,
+        help_text="TC USD→MXN usado en esta venta"
+    )
 
     def save(self, *args, **kwargs):
         if not self.folio_number:
@@ -232,10 +250,6 @@ class SaleReturnItem(models.Model):
 
 
 class Shift(models.Model):
-    """
-    Turno / caja del día.
-    Registra el fondo inicial, el cierre y la diferencia de efectivo.
-    """
     STATUS_CHOICES = [
         ('OPEN', 'Abierto'),
         ('CLOSED', 'Cerrado'),
@@ -244,13 +258,15 @@ class Shift(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='shifts')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OPEN', db_index=True)
 
+    # TC congelado al abrir el turno (referencia; cada venta guarda el suyo)
+    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=17.50)
+
     opening_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     closing_cash = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     expected_cash = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     difference = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     notes = models.TextField(blank=True)
-
     opened_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
 
@@ -270,3 +286,28 @@ class Shift(models.Model):
     @property
     def is_open(self):
         return self.status == 'OPEN'
+
+
+
+
+class ExchangeRateLog(models.Model):
+    """
+    Historial de cambios del tipo de cambio USD→MXN por empresa.
+    Permite auditar quién cambió el TC, cuándo y de qué a qué.
+    """
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name='exchange_rate_logs'
+    )
+    old_rate = models.DecimalField(max_digits=10, decimal_places=4)
+    new_rate = models.DecimalField(max_digits=10, decimal_places=4)
+    changed_by = models.ForeignKey(
+        AppUser, on_delete=models.SET_NULL, null=True, related_name='exchange_rate_changes'
+    )
+    changed_at = models.DateTimeField(auto_now_add=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+
+    def __str__(self):
+        return f"{self.company.name}: {self.old_rate} → {self.new_rate}"
