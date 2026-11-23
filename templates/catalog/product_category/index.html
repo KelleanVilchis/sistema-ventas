@@ -42,14 +42,7 @@
                     {% for category in categories %}
                     <tr>
                         <td>
-                            <div class="d-flex align-items-center">
-                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
-                                    <div class="symbol-label fs-3 bg-light-primary text-primary fw-bold">
-                                        {{ category.name|slice:":1"|upper }}
-                                    </div>
-                                </div>
                                 <span class="text-gray-800 fw-bold">{{ category.name }}</span>
-                            </div>
                         </td>
                         <td><span class="text-muted">{{ category.description|truncatechars:40|default:"Sin descripción" }}</span></td>
                         <td>{{ category.created_by.get_full_name|default:category.created_by.email|default:"Sistema" }}</td>

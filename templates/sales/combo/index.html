@@ -32,7 +32,6 @@
                 <thead>
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                         <th class="min-w-150px">Combo</th>
-                        <th class="min-w-125px">Compañía</th>
                         <th class="min-w-100px text-end">P. Costo</th>
                         <th class="min-w-100px text-end">P. Venta</th>
                         <th class="min-w-125px">Creado por</th>
@@ -44,22 +43,19 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
-                                    <div class="symbol-label fs-3 bg-light-primary text-primary fw-bold">
-                                        {{ combo.name|slice:":1"|upper }}
-                                    </div>
-                                </div>
                                 <div class="d-flex flex-column">
                                     <span class="text-gray-800 fw-bold">{{ combo.name }}</span>
                                     <span class="text-muted fs-7">{{ combo.items.count }} productos incluidos</span>
                                 </div>
                             </div>
                         </td>
-                        <td><span class="badge badge-light-info fw-bold">{{ combo.company.name }}</span></td>
                         <td class="text-end">${{ combo.purchase_price }}</td>
                         <td class="text-end fw-bold text-success">${{ combo.sale_price }}</td>
                         <td>{{ combo.created_by.email|default:"Sistema" }}</td>
                         <td class="text-end">
+                            <a href="{% url 'sales:combo_detail' combo.id %}" class="btn btn-icon btn-bg-light btn-active-color-info btn-sm me-1" title="Ver detalle">
+                                <i class="ki-duotone ki-eye fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                            </a>
                             <a href="{% url 'sales:combo_edit' combo.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
                                 <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i>
                             </a>
@@ -85,6 +81,9 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="text-gray-800 fw-bold fs-6">{{ combo.name }}</span>
                     <div>
+                        <a href="{% url 'sales:combo_detail' combo.id %}" class="btn btn-icon btn-bg-light btn-active-color-info btn-sm me-1" title="Ver detalle">
+                            <i class="ki-duotone ki-eye fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                        </a>
                         <a href="{% url 'sales:combo_edit' combo.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
                             <i class="ki-duotone ki-pencil fs-4"><span class="path1"></span><span class="path2"></span></i>
                         </a>

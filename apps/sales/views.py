@@ -26,6 +26,37 @@ class ComboListView(BasePermissionMixin, View):
         combos = Combo.objects.select_related('company', 'created_by').prefetch_related('items__product').filter(company=company)
         return render(request, 'sales/combo/index.html', {'combos': combos})
 
+
+
+class ComboDetailView(BasePermissionMixin, View):
+    permission_required = "sales.view_combo"
+
+    def get(self, request, combo_id):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        combo = get_object_or_404(
+            Combo.objects
+            .select_related('company', 'created_by')
+            .prefetch_related('items__product'),
+            id=combo_id,
+            company=company,
+        )
+
+        # Calcular precios usando los métodos del modelo
+        purchase_total = combo.purchase_price()
+        sale_total = combo.sale_price()
+        margin = sale_total - purchase_total
+        margin_pct = (margin / purchase_total * 100) if purchase_total > 0 else 0
+
+        return render(request, 'sales/combo/detail.html', {
+            'combo': combo,
+            'purchase_total': purchase_total,
+            'sale_total': sale_total,
+            'margin': margin,
+            'margin_pct': margin_pct,
+        })
+
 class CreateComboView(BasePermissionMixin, View):
     permission_required = 'sales.add_combo'
 

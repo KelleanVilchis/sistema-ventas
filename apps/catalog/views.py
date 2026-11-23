@@ -299,7 +299,8 @@ class UpdateProductView(BasePermissionMixin, View):
     def get(self, request, product_id):
         user = AppUser.objects.get(id=request.user.id)
         product = get_object_or_404(Product, id=product_id, created_by=user)
-        categories = ProductCategory.objects.filter(created_by=user)
+        company = Company.objects.get(selected=True,owner=user)
+        categories = ProductCategory.objects.filter(company=company)
         context = {
             'product': product,
             'categories': categories,

@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | {{ combo.name }}{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">{{ combo.name }}</span>
+            <span class="text-muted mt-1 fw-semibold fs-7">
+                Combo — {{ combo.company.name }}
+            </span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:combo_list' %}" class="btn btn-sm btn-light-primary me-2">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver
+            </a>
+            <a href="{% url 'sales:combo_edit' combo.id %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i> Editar
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-5">
+
+        <!-- ═══ Tarjetas de resumen ═══ -->
+        <div class="row g-4 mb-8">
+            <div class="col-md-3">
+                <div class="card bg-light-primary border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Precio de compra</span>
+                    <span class="fw-bold fs-2 text-primary">${{ purchase_total|floatformat:2 }}</span>
+                    <span class="text-muted fs-9">Costo total de insumos</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light-success border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Precio de venta</span>
+                    <span class="fw-bold fs-2 text-success">${{ sale_total|floatformat:2 }}</span>
+                    <span class="text-muted fs-9">Precio al público</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card {% if margin >= 0 %}bg-light-info{% else %}bg-light-danger{% endif %} border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Margen de ganancia</span>
+                    <span class="fw-bold fs-2 {% if margin >= 0 %}text-info{% else %}text-danger{% endif %}">
+                        ${{ margin|floatformat:2 }}
+                    </span>
+                    <span class="text-muted fs-9">Ganancia por combo</span>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card {% if margin_pct >= 30 %}bg-light-success{% elif margin_pct >= 15 %}bg-light-warning{% else %}bg-light-danger{% endif %} border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">% Margen</span>
+                    <span class="fw-bold fs-2 {% if margin_pct >= 30 %}text-success{% elif margin_pct >= 15 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ margin_pct|floatformat:1 }}%
+                    </span>
+                    <span class="text-muted fs-9">Sobre el costo</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Info general ═══ -->
+        <div class="row g-6 mb-8">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header border-0 pt-5">
+                        <h3 class="card-title fw-bold fs-4">Información</h3>
+                    </div>
+                    <div class="card-body pt-3">
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Nombre</span>
+                            <span class="fw-bold text-gray-800">{{ combo.name }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Productos incluidos</span>
+                            <span class="fw-bold text-gray-800">{{ combo.items.count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Sucursal</span>
+                            <span class="badge badge-light-info fw-bold">{{ combo.company.name }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Creado por</span>
+                            <span class="fw-bold text-gray-800">{{ combo.created_by.username|default:"—" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3">
+                            <span class="text-muted fw-semibold">Fecha de creación</span>
+                            <span class="fw-bold text-gray-800">{{ combo.date_created|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header border-0 pt-5">
+                        <h3 class="card-title fw-bold fs-4">Descripción</h3>
+                    </div>
+                    <div class="card-body pt-3">
+                        {% if combo.description %}
+                            <p class="text-gray-700 fs-6">{{ combo.description|linebreaks }}</p>
+                        {% else %}
+                            <div class="text-center py-10 text-muted">
+                                <i class="ki-duotone ki-document fs-5x mb-3"><span class="path1"></span><span class="path2"></span></i>
+                                <p class="fs-7">Sin descripción registrada</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Productos del combo ═══ -->
+        <div class="card">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bold fs-4 mb-1">Productos del combo</span>
+                    <span class="text-muted mt-1 fw-semibold fs-7">{{ combo.items.count }} producto{{ combo.items.count|pluralize:"s" }} incluido{{ combo.items.count|pluralize:"s" }}</span>
+                </h3>
+            </div>
+            <div class="card-body pt-3">
+
+                <!-- Desktop -->
+                <div class="table-responsive d-none d-md-block">
+                    <table class="table align-middle table-row-dashed fs-6 gy-5">
+                        <thead>
+                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                                <th class="min-w-100px">SKU</th>
+                                <th class="min-w-200px">Producto</th>
+                                <th class="min-w-125px">Categoría</th>
+                                <th class="text-center min-w-75px">Cantidad</th>
+                                <th class="text-end min-w-100px">P. Compra</th>
+                                <th class="text-end min-w-100px">P. Venta</th>
+                                <th class="text-end min-w-100px">Subtotal compra</th>
+                                <th class="text-end min-w-100px">Subtotal venta</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 fw-semibold">
+                            {% for item in combo.items.all %}
+                            <tr>
+                                <td>
+                                    {% if item.product %}
+                                        <span class="badge badge-light-dark fw-bold fs-7">{{ item.product.sku }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.product %}
+                                        <span class="text-gray-800 fw-bold">{{ item.product.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted fst-italic">(producto eliminado)</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.product and item.product.category %}
+                                        <span class="badge badge-light-info">{{ item.product.category.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted fs-7">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-light-primary fw-bold">{{ item.quantity }}</span>
+                                </td>
+                                <td class="text-end">
+                                    {% if item.product %}${{ item.product.purchase_price }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if item.product %}${{ item.product.sale_price }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-end text-muted">
+                                    {% if item.product %}
+                                        ${{ item.product.purchase_price|floatformat:2 }}
+                                        × {{ item.quantity }}
+                                    {% else %}—{% endif %}
+                                </td>
+                                <td class="text-end text-muted">
+                                    {% if item.product %}
+                                        ${{ item.product.sale_price|floatformat:2 }}
+                                        × {{ item.quantity }}
+                                    {% else %}—{% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-10 text-muted">
+                                    Este combo no tiene productos registrados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td colspan="6" class="text-end">Totales:</td>
+                                <td class="text-end text-primary">${{ purchase_total|floatformat:2 }}</td>
+                                <td class="text-end text-success">${{ sale_total|floatformat:2 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Móvil -->
+                <div class="d-block d-md-none">
+                    {% for item in combo.items.all %}
+                    <div class="border-bottom py-3">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div>
+                                {% if item.product %}
+                                    <div class="fw-bold text-gray-800">{{ item.product.name }}</div>
+                                    <div class="text-muted fs-8">{{ item.product.sku }}</div>
+                                {% else %}
+                                    <div class="text-muted fst-italic">(producto eliminado)</div>
+                                {% endif %}
+                            </div>
+                            <span class="badge badge-light-primary fw-bold">×{{ item.quantity }}</span>
+                        </div>
+                        {% if item.product %}
+                        <div class="d-flex justify-content-between fs-8 text-muted">
+                            <span>Compra: ${{ item.product.purchase_price }}</span>
+                            <span>Venta: ${{ item.product.sale_price }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8 text-muted">Este combo no tiene productos.</div>
+                    {% endfor %}
+
+                    {% if combo.items.all %}
+                    <div class="d-flex justify-content-between py-3 border-top fw-bold">
+                        <span>Total compra:</span>
+                        <span class="text-primary">${{ purchase_total|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 fw-bold">
+                        <span>Total venta:</span>
+                        <span class="text-success">${{ sale_total|floatformat:2 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
