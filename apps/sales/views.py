@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views import View
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Combo, ComboItem, ExchangeRateLog, Product, Order, OrderItem, Currency, Sale, Expense, SaleReturn, SaleReturnItem
+from .models import Combo, ComboItem, ExchangeRateLog, Product, Order, OrderItem, Sale, Expense, SaleReturn, SaleReturnItem
 from apps.company.models import Company
 from apps.accounts.models import AppUser
 from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
@@ -166,7 +166,7 @@ class OrderListView(BasePermissionMixin, View):
         orders = (
             Order.objects
             .filter(company=company)
-            .select_related("company", "currency")
+            .select_related("company")
             .annotate(is_sold=Exists(any_sale))   # ← nombre igual, lógica distinta
             .order_by("-created_at")
         )
@@ -178,12 +178,10 @@ class CreateOrderView(BasePermissionMixin, View):
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        currencies = Currency.objects.filter(company=company)
         products = Product.objects.filter(company=company)
         combos = Combo.objects.filter(company=company)
 
         context = {
-            'currencies': currencies,
             'products': products,
             'combos': combos,
             'status_choices': Order.STATUS_CHOICES
@@ -191,17 +189,14 @@ class CreateOrderView(BasePermissionMixin, View):
         return render(request, 'sales/order/create.html', context)
 
     def post(self, request):
-        currency_id = request.POST.get('currency')
         status = request.POST.get('status', 'PENDING')
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
         customer_name = request.POST.get('customer')
-        currencies = Currency.objects.filter(company=company)
         products = Product.objects.filter(company=company)
         combos = Combo.objects.filter(company=company)
 
         context = {
-            'currencies': currencies,
             'products': products,
             'combos': combos,
             'status_choices': Order.STATUS_CHOICES
@@ -216,10 +211,6 @@ class CreateOrderView(BasePermissionMixin, View):
             return render(request, 'sales/order/create.html', context)
 
         try:
-            currency_obj = Currency.objects.filter(id=currency_id).first() if currency_id else None
-            
-            
-
             # Calculamos el total iniciaL
             total_amount = 0
             for qty, prc in zip(quantities, prices):
@@ -229,7 +220,6 @@ class CreateOrderView(BasePermissionMixin, View):
             order = Order.objects.create(
                 customer=customer_name,
                 company=company,
-                currency=currency_obj,
                 status=status,
                 total_amount=total_amount,
                 created_by=request.user if request.user.is_authenticated else None
@@ -270,7 +260,6 @@ class UpdateOrderView(BasePermissionMixin, View):
         order = get_object_or_404(Order.objects.prefetch_related('items__product', 'items__combo'), id=order_id)
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        currencies = Currency.objects.filter(company=company)
         products = Product.objects.filter(company=company)
         combos = Combo.objects.filter(company=company)
 
@@ -278,7 +267,6 @@ class UpdateOrderView(BasePermissionMixin, View):
             return redirect('sales:order_list')
         context = {
             'order': order,
-            'currencies': currencies,
             'products': products,
             'combos': combos,
             'status_choices': Order.STATUS_CHOICES
@@ -287,7 +275,6 @@ class UpdateOrderView(BasePermissionMixin, View):
 
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
-        currency_id = request.POST.get('currency')
         status = request.POST.get('status')
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
@@ -306,7 +293,6 @@ class UpdateOrderView(BasePermissionMixin, View):
         try:
             order.customer = customer_name
             order.company = company
-            order.currency = Currency.objects.filter(id=currency_id).first() if currency_id else None
             order.status = status
 
             # Recreamos los ítems
@@ -593,7 +579,7 @@ class ExpenseListView(BasePermissionMixin, View):
         expenses = (
             Expense.objects
             .filter(company=company)
-            .select_related('company', 'currency', 'created_by')
+            .select_related('company', 'created_by')
             .order_by('-date_expense')
         )
 
@@ -610,7 +596,6 @@ class CreateExpenseView(BasePermissionMixin, View):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
         return render(request, 'sales/expense/create.html', {
-            'currencies': Currency.objects.filter(company=company),
             'type_choices': Expense.TYPE_CHOICES,
         })
 
@@ -621,14 +606,9 @@ class CreateExpenseView(BasePermissionMixin, View):
         amount_raw = request.POST.get('amount') or 0
         description = request.POST.get('description', '')
         expense_type = request.POST.get('expense_type', 'OPERATIVE')
-        currency_id = request.POST.get('currency')
         date_expense = request.POST.get('date_expense')
 
         try:
-            currency_obj = (
-                Currency.objects.filter(id=currency_id, company=company).first()
-                if currency_id else None
-            )
 
             amount = Decimal(str(amount_raw))
             if amount <= 0:
@@ -636,7 +616,6 @@ class CreateExpenseView(BasePermissionMixin, View):
 
             Expense.objects.create(
                 amount=amount,
-                currency=currency_obj,
                 description=description,
                 status='APPROVED',
                 expense_type=expense_type,
@@ -666,7 +645,6 @@ class UpdateExpenseView(BasePermissionMixin, View):
 
         return render(request, 'sales/expense/edit.html', {
             'expense': expense,
-            'currencies': Currency.objects.filter(company=company),
             'type_choices': Expense.TYPE_CHOICES,
         })
 
@@ -679,12 +657,6 @@ class UpdateExpenseView(BasePermissionMixin, View):
             amount = Decimal(str(request.POST.get('amount') or 0))
             if amount <= 0:
                 raise ValueError("El monto debe ser mayor a 0.")
-
-            currency_id = request.POST.get('currency')
-            expense.currency = (
-                Currency.objects.filter(id=currency_id, company=company).first()
-                if currency_id else None
-            )
 
             expense.amount = amount
             expense.description = request.POST.get('description', '')
@@ -916,7 +888,6 @@ class POSView(BasePermissionMixin, View):
                     customer=customer,
                     status='COMPLETED',
                     company=company,
-                    currency=None,
                     total_amount=0,
                     created_by=request.user,
                 )

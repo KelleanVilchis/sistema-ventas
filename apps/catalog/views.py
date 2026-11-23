@@ -220,11 +220,9 @@ class CreateProductView(BasePermissionMixin, View):
         owner = AppUser.objects.get(id=request.user.id)  
         company = Company.objects.get(selected=True, owner=owner)
         categories = ProductCategory.objects.filter(company=company)
-        currencies = Currency.objects.filter(company=company)
         
         context = {
             'categories': categories,
-            'currencies': currencies,
             'sku_code': random_sku(company),
         }
         return render(request, 'catalog/product/create.html', context)
@@ -236,11 +234,9 @@ class CreateProductView(BasePermissionMixin, View):
         category_id = request.POST.get('category')
         purchase_price = request.POST.get('purchase_price')
         sale_price = request.POST.get('sale_price')
-        currency_id = request.POST.get('currency')
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner) # Assuming the user is the owner of the company
         categories = ProductCategory.objects.filter(company=company)
-        currencies = Currency.objects.filter(company=company)
         context = {
             'sku': sku,
             'name': name,
@@ -248,9 +244,7 @@ class CreateProductView(BasePermissionMixin, View):
             'category_id': category_id,
             'purchase_price': purchase_price,
             'sale_price': sale_price,
-            'currency_id': currency_id,
             'categories': categories,
-            'currencies': currencies,
         }
 
         if not sku or not name or not purchase_price or not sale_price:
@@ -263,7 +257,6 @@ class CreateProductView(BasePermissionMixin, View):
 
         try:
             category_obj = ProductCategory.objects.filter(id=category_id).first() if category_id else None
-            currency_obj = Currency.objects.filter(id=currency_id).first() if currency_id else None
 
             Product.objects.create(
                 sku=sku,
@@ -274,7 +267,6 @@ class CreateProductView(BasePermissionMixin, View):
                 category=category_obj,
                 purchase_price=purchase_price,
                 sale_price=sale_price,
-                currency=currency_obj,
                 created_by=request.user if request.user.is_authenticated else None
             )
             messages.success(request, 'Producto creado exitosamente.')
@@ -308,11 +300,9 @@ class UpdateProductView(BasePermissionMixin, View):
         user = AppUser.objects.get(id=request.user.id)
         product = get_object_or_404(Product, id=product_id, created_by=user)
         categories = ProductCategory.objects.filter(created_by=user)
-        currencies = Currency.objects.filter(created_by=user)
         context = {
             'product': product,
             'categories': categories,
-            'currencies': currencies,
         }
         return render(request, 'catalog/product/edit.html', context)
 
@@ -325,16 +315,13 @@ class UpdateProductView(BasePermissionMixin, View):
         category_id = request.POST.get('category')
         purchase_price = request.POST.get('purchase_price')
         sale_price = request.POST.get('sale_price')
-        currency_id = request.POST.get('currency')
 
-        company = Company.objects.get(selected=True)
+        company = Company.objects.get(selected=True,owner=user)
         categories = ProductCategory.objects.filter(company=company)
-        currencies = Currency.objects.filter(company=company)
 
         context = {
             'product': product,
             'categories': categories,
-            'currencies': currencies,
         }
 
         if not sku or not name or not purchase_price or not sale_price:
@@ -352,7 +339,6 @@ class UpdateProductView(BasePermissionMixin, View):
             product.category = ProductCategory.objects.filter(id=category_id, created_by=user).first() if category_id else None
             product.purchase_price = purchase_price
             product.sale_price = sale_price
-            product.currency = Currency.objects.filter(id=currency_id, created_by=user).first() if currency_id else None
             product.save()
 
             messages.success(request, 'Producto actualizado exitosamente.')

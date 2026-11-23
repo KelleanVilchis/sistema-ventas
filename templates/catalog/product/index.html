@@ -37,7 +37,6 @@
                         <th class="min-w-100px text-center">Estado</th>
                         <th class="min-w-100px text-end">P. Compra</th>
                         <th class="min-w-100px text-end">P. Venta</th>
-                        <th class="min-w-80px text-center">Moneda</th>
                         <th class="text-end min-w-150px">Acciones</th>
                     </tr>
                 </thead>
@@ -47,11 +46,7 @@
                         <td><span class="badge badge-light-dark fw-bold fs-7">{{ product.sku }}</span></td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="symbol symbol-circle symbol-40px overflow-hidden me-3">
-                                    <div class="symbol-label fs-4 bg-light-primary text-primary fw-bold">
-                                        {{ product.name|slice:":1"|upper }}
-                                    </div>
-                                </div>
+                                
                                 <div class="d-flex flex-column">
                                     <span class="text-gray-800 fw-bold mb-1">{{ product.name }}</span>
                                     <span class="text-muted fs-7">{{ product.description|truncatechars:35|default:"Sin descripción" }}</span>
@@ -74,9 +69,6 @@
                         </td>
                         <td class="text-end">${{ product.purchase_price }}</td>
                         <td class="text-end fw-bold text-gray-800">${{ product.sale_price }}</td>
-                        <td class="text-center">
-                            <span class="badge badge-light-secondary fs-8">{{ product.currency.code|default:"-" }}</span>
-                        </td>
                         <td class="text-end">
                             
                             <a href="{% url 'catalog:product_edit' product.id %}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1" title="Editar">
