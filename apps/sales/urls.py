@@ -36,4 +36,7 @@ urlpatterns = [
     # ─── TURNOS / CORTES ───
     path("pos/turnos/", views.ShiftListView.as_view(), name="shift_list"),
     path("pos/turnos/<int:shift_id>/", views.ShiftDetailView.as_view(), name="shift_detail"),
+
+    # ─── CONFIGURACIÓN TC ───
+    path("configuracion/tipo-cambio/", views.ExchangeRateUpdateView.as_view(), name="exchange_rate"),
 ]

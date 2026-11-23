@@ -213,7 +213,21 @@
                                 </button>
 
                             </div>
-
+                            <!-- Tipo de cambio (visible solo si hay empresa activa) -->
+                            {% if user.is_authenticated %}
+                            <div class="app-navbar-item ms-2 d-none d-md-block">
+                                <a href="{% url 'sales:exchange_rate' %}"
+                                class="btn btn-sm btn-light-primary d-flex align-items-center"
+                                title="Editar tipo de cambio">
+                                    <i class="ki-duotone ki-dollar fs-5 me-1">
+                                        <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                                    </i>
+                                    <span class="fw-bold" id="navbar-tc">
+                                        {{ user.owned_companies.first.usd_exchange_rate|default:"17.50" }}
+                                    </span>
+                                </a>
+                            </div>
+                            {% endif %}
                             <!-- Usuario + Cerrar sesión -->
                             <div class="app-navbar-item ms-2">
                                 <div class="d-flex align-items-center">

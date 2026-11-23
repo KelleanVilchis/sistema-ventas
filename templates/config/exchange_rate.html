@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Tipo de Cambio{% endblock %}
+
+{% block content %}
+<!-- Mensajes de Alerta (Django Messages - Estilo Metronic estándar) -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-danger{% endif %} d-flex align-items-center p-5 mb-5">
+            <i class="ki-duotone {% if message.tags == 'success' %}ki-shield-tick{% else %}ki-shield-cross{% endif %} fs-2hx {% if message.tags == 'success' %}text-success{% else %}text-danger{% endif %} me-4">
+                <span class="path1"></span><span class="path2"></span>
+            </i>
+            <div class="d-flex flex-column">
+                <span class="fw-bold">{% if message.tags == 'success' %}¡Éxito!{% else %}Aviso{% endif %}</span>
+                <span>{{ message }}</span>
+            </div>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row g-5 g-xl-8">
+    <!-- Columna Izquierda: Tarjeta de Configuración del Tipo de Cambio -->
+    <div class="col-xl-5">
+        <div class="card card-flush h-100">
+            
+            <!-- Cabecera -->
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bold fs-3 mb-1">Tipo de Cambio</span>
+                    <span class="text-muted mt-1 fw-semibold fs-7">Configuración vigente para {{ company.name }}</span>
+                </h3>
+                <div class="card-toolbar">
+                    <span class="badge badge-light-primary fs-7 fw-bold">1 USD = MXN</span>
+                </div>
+            </div>
+
+            <!-- Cuerpo -->
+            <div class="card-body pt-4">
+                
+                <!-- Indicador Principal Destacado -->
+                <div class="d-flex align-items-center bg-light-primary rounded p-6 mb-7 border border-primary border-dashed">
+                    <div class="symbol symbol-50px me-4">
+                        <div class="symbol-label bg-primary text-inverse-primary">
+                            <i class="ki-duotone ki-dollar fs-2x text-white">
+                                <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                            </i>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column flex-grow-1">
+                        <span class="text-muted fw-semibold fs-7">Paridad Actual</span>
+                        <div class="d-flex align-items-baseline">
+                            <span class="fs-2hx fw-bold text-gray-900 me-2">${{ company.usd_exchange_rate }}</span>
+                            <span class="text-primary fw-bold fs-6">MXN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario -->
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="fv-row mb-6">
+                        <label class="required form-label fw-bold fs-6 text-gray-800">Nuevo Tipo de Cambio (MXN)</label>
+                        <div class="input-group input-group-solid">
+                            <span class="input-group-text fw-bold text-gray-600">$</span>
+                            <input type="number" 
+                                   name="exchange_rate" 
+                                   step="0.0001" 
+                                   min="0.0001"
+                                   value="{{ company.usd_exchange_rate }}"
+                                   class="form-control form-control-solid fw-bold fs-4 text-gray-800"
+                                   placeholder="0.0000"
+                                   required>
+                            <span class="input-group-text fw-semibold text-muted fs-7">MXN</span>
+                        </div>
+                        <div class="form-text text-muted">Ingresa el valor equivalente a 1 dólar estadounidense (USD).</div>
+                    </div>
+
+                    <div class="fv-row mb-7">
+                        <label class="form-label fw-semibold fs-6 text-gray-800">Notas o Referencia <span class="text-muted fs-7">(Opcional)</span></label>
+                        <input type="text" 
+                               name="notes" 
+                               maxlength="255"
+                               class="form-control form-control-solid"
+                               placeholder="Ej. Tipo de cambio DOF / Banxico">
+                    </div>
+
+                    <div class="d-flex justify-content-end pt-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="ki-duotone ki-check fs-2 me-1"></i>
+                            Actualizar Tipo de Cambio
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Historial de Cambios -->
+    <div class="col-xl-7">
+        <div class="card card-flush h-100">
+            
+            <!-- Cabecera -->
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bold fs-3 mb-1">Historial de Cambios</span>
+                    <span class="text-muted mt-1 fw-semibold fs-7">Bitácora de modificaciones aplicadas a la tasa</span>
+                </h3>
+                <div class="card-toolbar">
+                    <span class="badge badge-light-secondary fs-7 fw-semibold">
+                        {{ logs|length }} registro{{ logs|length|pluralize }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Cuerpo de la Tabla -->
+            <div class="card-body py-3">
+                <div class="table-responsive">
+                    <table class="table align-middle table-row-dashed fs-6 gy-4">
+                        <thead>
+                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                                <th class="min-w-125px">Fecha</th>
+                                <th class="min-w-100px text-end">Anterior</th>
+                                <th class="min-w-100px text-end">Nuevo</th>
+                                <th class="min-w-125px">Usuario</th>
+                                <th class="min-w-150px">Notas</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-600 fw-semibold">
+                            {% for log in logs %}
+                            <tr>
+                                <!-- Fecha -->
+                                <td>
+                                    <span class="text-gray-800 fw-bold d-block fs-7">{{ log.changed_at|date:"d/m/Y" }}</span>
+                                    <span class="text-muted fs-8">{{ log.changed_at|date:"H:i" }} hrs</span>
+                                </td>
+
+                                <!-- Valor Anterior -->
+                                <td class="text-end">
+                                    <span class="badge badge-light-secondary fs-7 fw-semibold">${{ log.old_rate }}</span>
+                                </td>
+
+                                <!-- Valor Nuevo -->
+                                <td class="text-end">
+                                    <span class="badge badge-light-success fs-7 fw-bold">${{ log.new_rate }}</span>
+                                </td>
+
+                                <!-- Usuario que modificó -->
+                                <td>
+                                    {% if log.changed_by %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="symbol symbol-circle symbol-30px me-2">
+                                                <div class="symbol-label fs-8 bg-light-primary text-primary fw-bold">
+                                                    {{ log.changed_by.username|slice:":1"|upper }}
+                                                </div>
+                                            </div>
+                                            <span class="text-gray-800 fs-7">
+                                                {{ log.changed_by.get_full_name|default:log.changed_by.username }}
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted fs-7">—</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Notas -->
+                                <td>
+                                    <span class="text-muted fs-7" title="{{ log.notes|default:'' }}">
+                                        {{ log.notes|default:"Sin notas"|truncatechars:35 }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-10 text-muted">
+                                    No hay cambios de tipo de cambio registrados todavía.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views import View
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Combo, ComboItem, Product, Order, OrderItem, Currency, Sale, Expense, SaleReturn, SaleReturnItem
+from .models import Combo, ComboItem, ExchangeRateLog, Product, Order, OrderItem, Currency, Sale, Expense, SaleReturn, SaleReturnItem
 from apps.company.models import Company
 from apps.accounts.models import AppUser
 from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
@@ -1155,3 +1155,66 @@ class ShiftDetailView(BasePermissionMixin, View):
             'total_gastos': total_gastos,
             'total_devoluciones': total_devoluciones,
         })
+
+
+class ExchangeRateUpdateView(BasePermissionMixin, View):
+    """Formulario para editar el tipo de cambio USD→MXN de la empresa activa."""
+    permission_required = "company.change_company"
+
+    def get(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        logs = (
+            ExchangeRateLog.objects
+            .filter(company=company)
+            .select_related('changed_by')
+            .order_by('-changed_at')[:20]
+        )
+
+        return render(request, 'config/exchange_rate.html', {
+            'company': company,
+            'logs': logs,
+        })
+
+    def post(self, request):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        try:
+            new_rate = Decimal(str(request.POST.get('exchange_rate') or 0))
+            if new_rate <= 0:
+                raise ValueError("El tipo de cambio debe ser mayor a 0.")
+
+            old_rate = company.usd_exchange_rate
+
+            if new_rate == old_rate:
+                messages.info(request, "El tipo de cambio no cambió.")
+                return redirect('sales:exchange_rate')
+
+            company.usd_exchange_rate = new_rate
+            company.save(update_fields=['usd_exchange_rate', 'date_updated'])
+
+            ExchangeRateLog.objects.create(
+                company=company,
+                old_rate=old_rate,
+                new_rate=new_rate,
+                changed_by=request.user,
+                notes=request.POST.get('notes', '')[:255],
+            )
+
+            messages.success(
+                request,
+                f"Tipo de cambio actualizado: ${old_rate} → ${new_rate} MXN/USD."
+            )
+            return redirect('sales:exchange_rate')
+
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            messages.error(request, f"Error al actualizar TC: {e}")
+
+        return redirect('sales:exchange_rate')
+
+
+
