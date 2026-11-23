@@ -886,11 +886,17 @@ class POSView(BasePermissionMixin, View):
         try:
             data = json.loads(request.body)
             items = data.get('items', [])
-            payment = Decimal(str(data.get('payment', 0)))
+            payment_method = data.get('payment_method', 'CASH_MXN')
+            paid_mxn_raw = Decimal(str(data.get('paid_mxn', 0) or 0))
+            paid_usd_raw = Decimal(str(data.get('paid_usd', 0) or 0))
             customer = (data.get('customer') or '').strip() or 'Cliente general'
+            exchange_rate = Decimal(str(company.usd_exchange_rate))
 
             if not items:
                 return JsonResponse({'ok': False, 'error': 'El carrito está vacío.'}, status=400)
+
+            if payment_method not in ('CASH_MXN', 'CASH_USD', 'MIXED', 'TRANSFER'):
+                return JsonResponse({'ok': False, 'error': 'Método de pago inválido.'}, status=400)
 
             with transaction.atomic():
                 # 1. Crear Order (COMPLETED) + OrderItems
@@ -936,23 +942,51 @@ class POSView(BasePermissionMixin, View):
                 order.total_amount = total
                 order.save(update_fields=['total_amount'])
 
-                # 2. Crear Sale (SOLD)
+                # 2. Calcular montos pagados según método
+                if payment_method == 'CASH_MXN':
+                    paid_mxn = paid_mxn_raw
+                    paid_usd = Decimal('0')
+                elif payment_method == 'CASH_USD':
+                    paid_mxn = Decimal('0')
+                    paid_usd = paid_usd_raw
+                elif payment_method == 'MIXED':
+                    paid_mxn = paid_mxn_raw
+                    paid_usd = paid_usd_raw
+                else:  # TRANSFER
+                    paid_mxn = total
+                    paid_usd = Decimal('0')
+
+                # 3. Validar que el pago cubra el total
+                paid_in_mxn = paid_mxn + (paid_usd * exchange_rate)
+                if payment_method != 'TRANSFER' and paid_in_mxn < total:
+                    return JsonResponse({
+                        'ok': False,
+                        'error': f'El pago (${paid_in_mxn}) es menor al total (${total}).'
+                    }, status=400)
+
+                # 4. Crear Sale con datos de pago
                 sale = Sale.objects.create(
                     order=order,
                     company=company,
                     total_amount=total,
                     status='SOLD',
                     date_sale=timezone.now(),
+                    payment_method=payment_method,
+                    paid_mxn=paid_mxn,
+                    paid_usd=paid_usd,
+                    exchange_rate=exchange_rate,
                     created_by=request.user,
                 )
 
-            change = max(Decimal('0'), payment - total)
+            change = max(Decimal('0'), paid_in_mxn - total)
 
             return JsonResponse({
                 'ok': True,
                 'sale_folio': sale.folio_number,
                 'total': str(total),
                 'change': str(change),
+                'paid_usd': str(paid_usd),
+                'exchange_rate': str(exchange_rate),
             })
 
         except Exception as e:

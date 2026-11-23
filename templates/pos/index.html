@@ -216,26 +216,99 @@
 
 <!-- Modal de pago -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">💵 Cobrar</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <div class="mb-4">
-                    <span class="text-muted fs-6">Total a cobrar</span>
-                    <div class="fw-bold fs-2x text-primary" id="modal-total">$0.00</div>
+            <div class="modal-body">
+
+                <!-- Total -->
+                <div class="text-center mb-5">
+                    <div class="text-muted fs-7">Total a cobrar</div>
+                    <div class="fw-bold fs-3x text-primary" id="modal-total">$0.00</div>
+                    <div class="text-muted fs-8" id="modal-tc-label">
+                        TC: ${{ company.usd_exchange_rate }} MXN/USD
+                    </div>
                 </div>
-                <div class="mb-4">
-                    <label class="form-label fw-bold">¿Pagó con cuánto?</label>
-                    <input type="number" step="0.01" min="0" id="payment-input"
-                           class="form-control form-control-lg form-control-solid text-center fs-2 fw-bold">
+
+                <!-- Método de pago -->
+                <div class="mb-5">
+                    <label class="form-label fw-bold fs-6">Método de pago</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline btn-active-primary method-btn active" data-method="CASH_MXN">
+                            💵 Efectivo MXN
+                        </button>
+                        <button type="button" class="btn btn-outline btn-active-success method-btn" data-method="CASH_USD">
+                            💲 Efectivo USD
+                        </button>
+                        <button type="button" class="btn btn-outline btn-active-warning method-btn" data-method="MIXED">
+                            🔀 Mixto
+                        </button>
+                        <button type="button" class="btn btn-outline btn-active-info method-btn" data-method="TRANSFER">
+                            🏦 Transferencia
+                        </button>
+                    </div>
                 </div>
-                <div class="alert alert-light-success d-flex justify-content-between align-items-center">
+
+                <!-- Contenedor dinámico del pago -->
+                <div id="payment-fields">
+
+                    <!-- CASH_MXN -->
+                    <div class="pay-panel" data-method="CASH_MXN">
+                        <label class="form-label fw-bold">¿Pagó con cuánto? (MXN)</label>
+                        <input type="number" step="0.01" min="0" id="paid-mxn"
+                               class="form-control form-control-lg form-control-solid text-center fs-2 fw-bold">
+                    </div>
+
+                    <!-- CASH_USD -->
+                    <div class="pay-panel d-none" data-method="CASH_USD">
+                        <label class="form-label fw-bold">¿Pagó con cuánto? (USD)</label>
+                        <input type="number" step="0.01" min="0" id="paid-usd-only"
+                               class="form-control form-control-lg form-control-solid text-center fs-2 fw-bold">
+                        <div class="text-muted fs-7 mt-2 text-center">
+                            Equivalente: <span class="fw-bold text-success" id="usd-equivalent">$0.00 MXN</span>
+                        </div>
+                    </div>
+
+                    <!-- MIXED -->
+                    <div class="pay-panel d-none" data-method="MIXED">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label fw-bold fs-7">MXN</label>
+                                <input type="number" step="0.01" min="0" id="paid-mxn-mixed"
+                                       class="form-control form-control-lg form-control-solid text-center fs-3 fw-bold">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-bold fs-7">USD</label>
+                                <input type="number" step="0.01" min="0" id="paid-usd-mixed"
+                                       class="form-control form-control-lg form-control-solid text-center fs-3 fw-bold">
+                            </div>
+                        </div>
+                        <div class="text-muted fs-7 mt-2 text-center">
+                            Equivalente: <span class="fw-bold text-success" id="mixed-equivalent">$0.00 MXN</span>
+                        </div>
+                    </div>
+
+                    <!-- TRANSFER -->
+                    <div class="pay-panel d-none" data-method="TRANSFER">
+                        <div class="alert alert-light-info d-flex align-items-center p-4">
+                            <i class="ki-duotone ki-information-5 fs-2x text-info me-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                            <div class="fs-7">
+                                Confirma la venta cuando el cliente haya hecho la transferencia por <strong id="transfer-amount">$0.00</strong>.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Cambio -->
+                <div class="alert alert-light-success d-flex justify-content-between align-items-center mt-4 mb-0" id="change-box">
                     <span class="fw-bold">Cambio:</span>
                     <span class="fw-bold fs-2 text-success" id="modal-change">$0.00</span>
                 </div>
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
@@ -336,73 +409,168 @@
         renderCart();
     }
 
-    function openPayment() {
-        if (currentTotal <= 0) return;
-        document.getElementById('modal-total').textContent = '$' + currentTotal.toFixed(2);
-        document.getElementById('payment-input').value = currentTotal.toFixed(2);
-        document.getElementById('modal-change').textContent = '$0.00';
-        new bootstrap.Modal(document.getElementById('paymentModal')).show();
-    }
+    // ─── Estado del pago ───
+let currentMethod = 'CASH_MXN';
+const exchangeRate = parseFloat('{{ company.usd_exchange_rate }}') || 17.50;
 
-    document.getElementById('payment-input')?.addEventListener('input', function() {
-        const paid = parseFloat(this.value) || 0;
-        const change = Math.max(0, paid - currentTotal);
-        document.getElementById('modal-change').textContent = '$' + change.toFixed(2);
+function openPayment() {
+    if (currentTotal <= 0) return;
+
+    document.getElementById('modal-total').textContent = '$' + currentTotal.toFixed(2);
+    document.getElementById('transfer-amount').textContent = '$' + currentTotal.toFixed(2);
+
+    // Resetear campos
+    document.getElementById('paid-mxn').value = currentTotal.toFixed(2);
+    document.getElementById('paid-usd-only').value = '';
+    document.getElementById('paid-mxn-mixed').value = '';
+    document.getElementById('paid-usd-mixed').value = '';
+
+    // Reset método a CASH_MXN
+    setPaymentMethod('CASH_MXN');
+
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+function setPaymentMethod(method) {
+    currentMethod = method;
+
+    // Resaltar botón activo
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.classList.remove('active', 'btn-primary', 'btn-success', 'btn-warning', 'btn-info');
+        if (btn.dataset.method === method) {
+            btn.classList.add('active');
+        }
     });
 
-    async function confirmSale() {
-        const payment = parseFloat(document.getElementById('payment-input').value) || 0;
-        if (payment < currentTotal) {
-            alert('El pago es menor al total.');
-            return;
-        }
+    // Mostrar panel correspondiente
+    document.querySelectorAll('.pay-panel').forEach(panel => {
+        panel.classList.toggle('d-none', panel.dataset.method !== method);
+    });
 
-        const btn = document.getElementById('btn-confirm-sale');
-        btn.disabled = true;
-        btn.textContent = 'Procesando...';
+    // Mostrar/ocultar caja de cambio
+    document.getElementById('change-box').style.display =
+        (method === 'TRANSFER') ? 'none' : 'flex';
 
-        try {
-            const items = Object.values(cart).map(i => ({
-                type: i.type,
-                id: i.id,
-                qty: i.qty,
-                price: i.price,
-            }));
+    recalcPayment();
+}
 
-            const res = await fetch('{% url "sales:pos" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken,
-                },
-                body: JSON.stringify({
-                    items: items,
-                    payment: payment,
-                    customer: document.getElementById('customer-input').value,
-                }),
-            });
+function recalcPayment() {
+    let paidMxn = 0;
+    let paidUsd = 0;
+    let totalPaidMxn = 0;
 
-            const data = await res.json();
+    if (currentMethod === 'CASH_MXN') {
+        paidMxn = parseFloat(document.getElementById('paid-mxn').value) || 0;
+        totalPaidMxn = paidMxn;
 
-            if (data.ok) {
-                // Cerrar modal, limpiar carrito, mostrar toast
-                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                for (const k in cart) delete cart[k];
-                renderCart();
-                document.getElementById('customer-input').value = '';
+    } else if (currentMethod === 'CASH_USD') {
+        paidUsd = parseFloat(document.getElementById('paid-usd-only').value) || 0;
+        totalPaidMxn = paidUsd * exchangeRate;
+        document.getElementById('usd-equivalent').textContent =
+            '$' + totalPaidMxn.toFixed(2) + ' MXN';
 
-                // Toast éxito
-                alert(`✅ Venta ${data.sale_folio}\nTotal: $${data.total}\nCambio: $${data.change}`);
-            } else {
-                alert('Error: ' + data.error);
-            }
-        } catch (e) {
-            alert('Error de conexión: ' + e);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Confirmar Venta';
-        }
+    } else if (currentMethod === 'MIXED') {
+        paidMxn = parseFloat(document.getElementById('paid-mxn-mixed').value) || 0;
+        paidUsd = parseFloat(document.getElementById('paid-usd-mixed').value) || 0;
+        totalPaidMxn = paidMxn + (paidUsd * exchangeRate);
+        document.getElementById('mixed-equivalent').textContent =
+            '$' + totalPaidMxn.toFixed(2) + ' MXN';
+
+    } else if (currentMethod === 'TRANSFER') {
+        totalPaidMxn = currentTotal;
     }
+
+    // Calcular cambio (siempre en MXN)
+    const change = Math.max(0, totalPaidMxn - currentTotal);
+    document.getElementById('modal-change').textContent = '$' + change.toFixed(2);
+
+    // Deshabilitar botón si el pago no cubre el total
+    const btn = document.getElementById('btn-confirm-sale');
+    const insufficient = currentMethod !== 'TRANSFER' && totalPaidMxn < currentTotal;
+    btn.disabled = insufficient;
+    if (insufficient) {
+        btn.textContent = 'Pago insuficiente';
+    } else {
+        btn.textContent = 'Confirmar Venta';
+    }
+}
+
+// Listeners
+document.querySelectorAll('.method-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPaymentMethod(btn.dataset.method));
+});
+
+['paid-mxn', 'paid-usd-only', 'paid-mxn-mixed', 'paid-usd-mixed'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', recalcPayment);
+});
+
+// Reemplaza la función confirmSale() anterior
+async function confirmSale() {
+    let paid_mxn = 0;
+    let paid_usd = 0;
+
+    if (currentMethod === 'CASH_MXN') {
+        paid_mxn = parseFloat(document.getElementById('paid-mxn').value) || 0;
+    } else if (currentMethod === 'CASH_USD') {
+        paid_usd = parseFloat(document.getElementById('paid-usd-only').value) || 0;
+    } else if (currentMethod === 'MIXED') {
+        paid_mxn = parseFloat(document.getElementById('paid-mxn-mixed').value) || 0;
+        paid_usd = parseFloat(document.getElementById('paid-usd-mixed').value) || 0;
+    } else if (currentMethod === 'TRANSFER') {
+        paid_mxn = currentTotal;
+    }
+
+    const btn = document.getElementById('btn-confirm-sale');
+    btn.disabled = true;
+    btn.textContent = 'Procesando...';
+
+    try {
+        const items = Object.values(cart).map(i => ({
+            type: i.type,
+            id: i.id,
+            qty: i.qty,
+            price: i.price,
+        }));
+
+        const res = await fetch('{% url "sales:pos" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({
+                items: items,
+                payment_method: currentMethod,
+                paid_mxn: paid_mxn,
+                paid_usd: paid_usd,
+                customer: document.getElementById('customer-input').value,
+            }),
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+            for (const k in cart) delete cart[k];
+            renderCart();
+            document.getElementById('customer-input').value = '';
+
+            let msg = `✅ Venta ${data.sale_folio}\nTotal: $${data.total} MXN`;
+            if (currentMethod === 'CASH_USD' || currentMethod === 'MIXED') {
+                msg += `\nPagó: ${data.paid_usd} USD (TC: $${data.exchange_rate})`;
+            }
+            msg += `\nCambio: $${data.change} MXN`;
+            alert(msg);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (e) {
+        alert('Error de conexión: ' + e);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Confirmar Venta';
+    }
+}
 
     // Búsqueda
     document.getElementById('search-input')?.addEventListener('input', function() {
