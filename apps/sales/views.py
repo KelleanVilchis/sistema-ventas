@@ -576,6 +576,12 @@ class SaleListView(BasePermissionMixin, View):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
 
+        # ─── NUEVO: filtros adicionales ───
+        search = request.GET.get('q', '').strip()
+        date_filter = request.GET.get('date_filter', 'ALL')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+
         status_filter = request.GET.get('status', 'ALL')
         method_filter = request.GET.get('method', 'ALL')
 
@@ -586,6 +592,38 @@ class SaleListView(BasePermissionMixin, View):
             .order_by('-date_sale')
         )
 
+        # ─── NUEVO: búsqueda (folio venta / folio pedido / cliente) ───
+        if search:
+            sales_qs = sales_qs.filter(
+                Q(folio_number__icontains=search) |
+                Q(order__folio_number__icontains=search) |
+                Q(order__customer__icontains=search)
+            )
+
+        # ─── NUEVO: filtro por fecha ───
+        today = timezone.now().date()
+        if date_filter == 'TODAY':
+            sales_qs = sales_qs.filter(date_sale__date=today)
+        elif date_filter == 'YESTERDAY':
+            sales_qs = sales_qs.filter(date_sale__date=today - timedelta(days=1))
+        elif date_filter == 'LAST_7':
+            sales_qs = sales_qs.filter(date_sale__date__gte=today - timedelta(days=7))
+        elif date_filter == 'THIS_MONTH':
+            sales_qs = sales_qs.filter(date_sale__year=today.year, date_sale__month=today.month)
+        elif date_filter == 'LAST_MONTH':
+            if today.month == 1:
+                sales_qs = sales_qs.filter(date_sale__year=today.year - 1, date_sale__month=12)
+            else:
+                sales_qs = sales_qs.filter(date_sale__year=today.year, date_sale__month=today.month - 1)
+        elif date_filter == 'CUSTOM':
+            if date_from:
+                sales_qs = sales_qs.filter(date_sale__date__gte=date_from)
+            if date_to:
+                sales_qs = sales_qs.filter(date_sale__date__lte=date_to)
+        else:
+            date_filter = 'ALL'
+
+        # ─── Filtros por estado y método (TU lógica original) ───
         if status_filter in ('SOLD', 'RETURNED', 'CANCELLED', 'PENDING'):
             sales_qs = sales_qs.filter(status=status_filter)
         else:
@@ -596,7 +634,7 @@ class SaleListView(BasePermissionMixin, View):
         else:
             method_filter = 'ALL'
 
-        # Conteos por estado
+        # ─── Conteos por estado (TU lógica original) ───
         counts_qs = (
             Sale.objects
             .filter(company=company)
@@ -606,22 +644,60 @@ class SaleListView(BasePermissionMixin, View):
         counts = {row['status']: row['n'] for row in counts_qs}
         counts['ALL'] = sum(counts.values()) if counts else 0
 
-        # Totales por método de pago (sobre el listado filtrado)
+        # ─── NUEVO: conteos por método de pago ───
+        method_counts_qs = (
+            Sale.objects
+            .filter(company=company)
+            .values('payment_method')
+            .annotate(n=Count('id'))
+        )
+        method_counts = {row['payment_method']: row['n'] for row in method_counts_qs}
+        method_counts['ALL'] = sum(method_counts.values()) if method_counts else 0
+
+        # ─── Totales por método de pago (TU lógica original) ───
         totals = sales_qs.aggregate(
             total_mxn=Sum('paid_mxn'),
             total_usd=Sum('paid_usd'),
             total=Sum('total_amount'),
         )
 
+        # ─── NUEVO: paginación ───
+        paginator = Paginator(sales_qs, 25)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        page_range = []
+        if paginator.count > 0:
+            for num in paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1):
+                if num == Paginator.ELLIPSIS:
+                    page_range.append({'is_ellipsis': True, 'number': None})
+                else:
+                    page_range.append({'is_ellipsis': False, 'number': num})
+
+        params = request.GET.copy()
+        params.pop('page', None)
+        page_qs = params.urlencode()
+
         return render(request, 'sales/sales/sale_list.html', {
-            'sales': sales_qs,
+            'sales': page_obj,          # ← ahora es page_obj (sigue siendo iterable)
+            'page_obj': page_obj,
+            'paginator': paginator,
+            'page_range': page_range,
+            'page_qs': page_qs,
+
+            # ─── NUEVO ───
+            'search': search,
+            'date_filter': date_filter,
+            'date_from': date_from,
+            'date_to': date_to,
+            'method_counts': method_counts,
+
+            # ─── TU lógica original ───
             'status_filter': status_filter,
             'method_filter': method_filter,
             'counts': counts,
             'totals': totals,
             'company': company,
         })
-
 
 class CreateSaleView(BasePermissionMixin, View):
     permission_required = 'sales.add_sale'

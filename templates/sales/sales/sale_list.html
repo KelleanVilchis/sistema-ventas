@@ -26,52 +26,109 @@
             {% endfor %}
         {% endif %}
 
-        <!-- ─── FILTROS POR ESTADO ─── -->
-        <div class="d-flex flex-wrap gap-2 mb-3">
-            <a href="?status=ALL&method={{ method_filter }}"
-               class="btn btn-sm {% if status_filter == 'ALL' or not status_filter %}btn-primary{% else %}btn-light{% endif %}">
-                Todas <span class="badge badge-light ms-1">{{ counts.ALL }}</span>
-            </a>
-            <a href="?status=SOLD&method={{ method_filter }}"
-               class="btn btn-sm {% if status_filter == 'SOLD' %}btn-success{% else %}btn-light{% endif %}">
-                Vendidas <span class="badge badge-light ms-1">{{ counts.SOLD }}</span>
-            </a>
-            <a href="?status=RETURNED&method={{ method_filter }}"
-               class="btn btn-sm {% if status_filter == 'RETURNED' %}btn-warning{% else %}btn-light{% endif %}">
-                Devueltas <span class="badge badge-light ms-1">{{ counts.RETURNED }}</span>
-            </a>
-            <a href="?status=CANCELLED&method={{ method_filter }}"
-               class="btn btn-sm {% if status_filter == 'CANCELLED' %}btn-danger{% else %}btn-light{% endif %}">
-                Canceladas <span class="badge badge-light ms-1">{{ counts.CANCELLED }}</span>
-            </a>
-        </div>
+        <!-- ══════════ FILTROS ══════════ -->
+        <form method="get" id="filter-form">
+            <input type="hidden" name="status" value="{{ status_filter }}" id="status-input">
+            <input type="hidden" name="method" value="{{ method_filter }}" id="method-input">
+            <input type="hidden" name="date_filter" value="{{ date_filter }}" id="date-filter-input">
 
-        <!-- ─── FILTROS POR MÉTODO DE PAGO ─── -->
-        <div class="d-flex flex-wrap gap-2 mb-5">
-            <a href="?status={{ status_filter }}&method=ALL"
-               class="btn btn-sm {% if method_filter == 'ALL' or not method_filter %}btn-dark{% else %}btn-light{% endif %}">
-                Todos los métodos
-            </a>
-            <a href="?status={{ status_filter }}&method=CASH_MXN"
-               class="btn btn-sm {% if method_filter == 'CASH_MXN' %}btn-primary{% else %}btn-light{% endif %}">
-                 Efectivo MXN
-            </a>
-            <a href="?status={{ status_filter }}&method=CASH_USD"
-               class="btn btn-sm {% if method_filter == 'CASH_USD' %}btn-success{% else %}btn-light{% endif %}">
-                 Efectivo USD
-            </a>
-            <a href="?status={{ status_filter }}&method=MIXED"
-               class="btn btn-sm {% if method_filter == 'MIXED' %}btn-warning{% else %}btn-light{% endif %}">
-                 Mixto
-            </a>
-            <a href="?status={{ status_filter }}&method=TRANSFER"
-               class="btn btn-sm {% if method_filter == 'TRANSFER' %}btn-info{% else %}btn-light{% endif %}">
-                 Transferencia
-            </a>
-        </div>
+            <!-- Búsqueda + rango de fechas -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="position-relative">
+                        <i class="ki-duotone ki-magnifier fs-2 position-absolute top-50 translate-middle-y ms-4">
+                            <span class="path1"></span><span class="path2"></span>
+                        </i>
+                        <input type="text" name="q" value="{{ search }}"
+                               class="form-control form-control-solid ps-15"
+                               placeholder="Buscar por folio de venta, folio de pedido o cliente...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="ki-duotone ki-magnifier fs-3 me-1"><span class="path1"></span><span class="path2"></span></i>
+                        Buscar
+                    </button>
+                </div>
+            </div>
 
-        <!-- ─── TOTALES DEL LISTADO ─── -->
-        <div class="row g-3 mb-5">
+            <!-- Filtros de estado -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="text-muted fw-semibold fs-7 me-2 align-self-center">Estado:</span>
+                <button type="button" class="btn btn-sm {% if status_filter == 'ALL' %}btn-dark{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('ALL')">
+                    Todas ({{ counts.ALL }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'SOLD' %}btn-success{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('SOLD')">
+                    ✓ Vendidas ({{ counts.SOLD|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'RETURNED' %}btn-warning{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('RETURNED')">
+                    ↩ Devueltas ({{ counts.RETURNED|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'CANCELLED' %}btn-danger{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('CANCELLED')">
+                    ✕ Canceladas ({{ counts.CANCELLED|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'PENDING' %}btn-info{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('PENDING')">
+                    ⏱ En espera ({{ counts.PENDING|default:0 }})
+                </button>
+            </div>
+
+            <!-- Filtros de método de pago -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="text-muted fw-semibold fs-7 me-2 align-self-center">Pago:</span>
+                <button type="button" class="btn btn-sm {% if method_filter == 'ALL' %}btn-dark{% else %}btn-light{% endif %}"
+                        onclick="applyMethod('ALL')">
+                    Todos ({{ method_counts.ALL }})
+                </button>
+                <button type="button" class="btn btn-sm {% if method_filter == 'CASH_MXN' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyMethod('CASH_MXN')">
+                    💵 MXN ({{ method_counts.CASH_MXN|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if method_filter == 'CASH_USD' %}btn-success{% else %}btn-light{% endif %}"
+                        onclick="applyMethod('CASH_USD')">
+                    💲 USD ({{ method_counts.CASH_USD|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if method_filter == 'MIXED' %}btn-warning{% else %}btn-light{% endif %}"
+                        onclick="applyMethod('MIXED')">
+                    🔀 Mixto ({{ method_counts.MIXED|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if method_filter == 'TRANSFER' %}btn-info{% else %}btn-light{% endif %}"
+                        onclick="applyMethod('TRANSFER')">
+                    🏦 Transf. ({{ method_counts.TRANSFER|default:0 }})
+                </button>
+            </div>
+
+            <!-- Filtros de fecha rápida -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="text-muted fw-semibold fs-7 me-2 align-self-center">Fecha:</span>
+                <button type="button" class="btn btn-sm {% if date_filter == 'ALL' %}btn-dark{% else %}btn-light{% endif %}"
+                        onclick="applyDate('ALL')">Todas</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'TODAY' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('TODAY')">Hoy</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'YESTERDAY' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('YESTERDAY')">Ayer</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'LAST_7' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('LAST_7')">Últimos 7 días</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'THIS_MONTH' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('THIS_MONTH')">Este mes</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'LAST_MONTH' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('LAST_MONTH')">Mes pasado</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'CUSTOM' %}btn-info{% else %}btn-light{% endif %}"
+                        onclick="applyDate('CUSTOM')">Rango personalizado</button>
+
+                <a href="{% url 'sales:sale_list' %}" class="btn btn-sm btn-light-danger ms-auto">
+                    <i class="ki-duotone ki-cross-circle fs-7 me-1"><span class="path1"></span><span class="path2"></span></i>
+                    Limpiar filtros
+                </a>
+            </div>
+        </form>
+
+        <!-- ══════════ TOTALES ══════════ -->
+        <div class="row g-3 mb-5 mt-3">
             <div class="col-md-4">
                 <div class="card bg-light-success border-0 p-3">
                     <span class="text-muted fs-8 fw-semibold">Total ventas (MXN)</span>
@@ -92,13 +149,14 @@
             </div>
         </div>
 
-        <!-- TABLA (DESKTOP) -->
+        <!-- ══════════ TABLA (DESKTOP) ══════════ -->
+        {% if page_obj.object_list %}
         <div class="table-responsive d-none d-md-block">
             <table class="table align-middle table-row-dashed fs-6 gy-5">
                 <thead>
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                        <th class="min-w-125px">Folio</th>
-                        <th class="min-w-100px">Pedido</th>
+                        <th class="min-w-125px">Folio Venta</th>
+                        <th class="min-w-125px">Pedido Base</th>
                         <th class="min-w-150px">Cliente</th>
                         <th class="min-w-100px text-center">Estado</th>
                         <th class="min-w-125px">Pago</th>
@@ -110,31 +168,33 @@
                 <tbody class="text-gray-600 fw-semibold">
                     {% for sale in sales %}
                     <tr>
-                        <td><span class="badge badge-primary fw-bold fs-7">{{ sale.folio_number }}</span></td>
-                        <td><span class="badge badge-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
+                        <td><span class="badge badge-light-primary fw-bold fs-7">{{ sale.folio_number }}</span></td>
+                        <td><span class="badge badge-light-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
                         <td>
-                            <span class="text-gray-800 fw-bold">{{ sale.order.customer }}</span>
+                            <div class="d-flex align-items-center">
+                                <span class="text-gray-800 fw-bold">{{ sale.order.customer }}</span>
+                            </div>
                         </td>
                         <td class="text-center">
                             {% if sale.status == 'SOLD' %}
-                                <span class="badge badge-success fw-bold">Vendido</span>
+                                <span class="badge badge-light-success fw-bold">Vendido</span>
                             {% elif sale.status == 'RETURNED' %}
-                                <span class="badge badge-warning fw-bold">Devuelto</span>
+                                <span class="badge badge-light-warning fw-bold">Devuelto</span>
                             {% elif sale.status == 'CANCELLED' %}
-                                <span class="badge badge-danger fw-bold">Cancelado</span>
+                                <span class="badge badge-light-danger fw-bold">Cancelado</span>
                             {% else %}
-                                <span class="badge badge-info fw-bold">En espera</span>
+                                <span class="badge badge-light-info fw-bold">En espera</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if sale.payment_method == 'CASH_MXN' %}
-                                <span class="badge badge-primary fs-8"> MXN</span>
+                                <span class="badge badge-light-primary fs-8">💵 MXN</span>
                             {% elif sale.payment_method == 'CASH_USD' %}
-                                <span class="badge badge-success fs-8"> USD</span>
+                                <span class="badge badge-light-success fs-8">💲 USD</span>
                             {% elif sale.payment_method == 'MIXED' %}
-                                <span class="badge badge-warning fs-8"> Mixto</span>
+                                <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
                             {% else %}
-                                <span class="badge badge-info fs-8"> Transf.</span>
+                                <span class="badge badge-light-info fs-8">🏦 Transf.</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
@@ -150,7 +210,7 @@
                         </td>
                         <td>{{ sale.date_sale|date:"d/m/Y H:i" }}</td>
                         <td class="text-end">
-                            {# ─── Devolución ─── #}
+                            {# Devolución #}
                             {% if sale.status == 'SOLD' %}
                                 <button type="button"
                                         class="btn btn-icon btn-bg-light btn-active-color-warning btn-sm me-1 text-warning"
@@ -168,9 +228,10 @@
                                 </span>
                             {% endif %}
 
-                            {# ─── Editar ─── #}
+                            {# Editar #}
                             {% if sale.status == 'RETURNED' or sale.status == 'CANCELLED' %}
                                 <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
+                                      title="No se puede editar"
                                       style="pointer-events: none; opacity: .55;">
                                     <i class="ki-duotone ki-pencil fs-3 text-muted"><span class="path1"></span><span class="path2"></span></i>
                                 </span>
@@ -180,9 +241,10 @@
                                 </a>
                             {% endif %}
 
-                            {# ─── Eliminar ─── #}
+                            {# Eliminar #}
                             {% if sale.status == 'RETURNED' or sale.status == 'CANCELLED' %}
                                 <span class="btn btn-icon btn-bg-light btn-sm disabled"
+                                      title="No se puede eliminar"
                                       style="pointer-events: none; opacity: .55;">
                                     <i class="ki-duotone ki-trash fs-3 text-muted"><span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span></i>
                                 </span>
@@ -198,14 +260,12 @@
                             {% endif %}
                         </td>
                     </tr>
-                    {% empty %}
-                    <tr><td colspan="8" class="text-center py-10 text-muted">No hay ventas registradas con estos filtros.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
-        <!-- MÓVIL -->
+        <!-- ══════════ MÓVIL ══════════ -->
         <div class="d-block d-md-none">
             {% for sale in sales %}
             <div class="card border border-gray-300 mb-4 p-4 shadow-sm bg-body">
@@ -252,13 +312,13 @@
 
                 <div class="d-flex gap-1 flex-wrap mb-2">
                     {% if sale.payment_method == 'CASH_MXN' %}
-                        <span class="badge badge-light-primary fs-8"> MXN</span>
+                        <span class="badge badge-light-primary fs-8">💵 MXN</span>
                     {% elif sale.payment_method == 'CASH_USD' %}
-                        <span class="badge badge-light-success fs-8"> USD</span>
+                        <span class="badge badge-light-success fs-8">💲 USD</span>
                     {% elif sale.payment_method == 'MIXED' %}
-                        <span class="badge badge-light-warning fs-8"> Mixto</span>
+                        <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
                     {% else %}
-                        <span class="badge badge-light-info fs-8"> Transferencia</span>
+                        <span class="badge badge-light-info fs-8">🏦 Transferencia</span>
                     {% endif %}
                     {% if sale.paid_usd > 0 %}
                         <span class="badge badge-light-dark fs-8">{{ sale.paid_usd }} USD @ ${{ sale.exchange_rate }}</span>
@@ -272,16 +332,76 @@
                     <span class="text-muted fs-8">{{ sale.date_sale|date:"d/m/Y H:i" }}</span>
                 </div>
             </div>
-            {% empty %}
-            <div class="text-center py-10 text-muted">No hay ventas registradas con estos filtros.</div>
             {% endfor %}
         </div>
+
+        <!-- ══════════ PAGINACIÓN ══════════ -->
+        {% if paginator.num_pages > 1 %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-5">
+            <div class="text-muted fs-7">
+                Mostrando
+                <strong>{{ page_obj.start_index }}</strong>
+                a
+                <strong>{{ page_obj.end_index }}</strong>
+                de
+                <strong>{{ paginator.count }}</strong>
+                venta{{ paginator.count|pluralize:"s" }}
+            </div>
+
+            <nav>
+                <ul class="pagination mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page=1">««</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ page_obj.previous_page_number }}">«</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">««</span></li>
+                        <li class="page-item disabled"><span class="page-link">«</span></li>
+                    {% endif %}
+
+                    {% for p in page_range %}
+                        {% if p.is_ellipsis %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% elif p.number == page_obj.number %}
+                            <li class="page-item active"><span class="page-link">{{ p.number }}</span></li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ p.number }}">{{ p.number }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ page_obj.next_page_number }}">»</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ paginator.num_pages }}">»»</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">»</span></li>
+                        <li class="page-item disabled"><span class="page-link">»»</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- ══════════ EMPTY STATE ══════════ -->
+        <div class="text-center py-15 text-muted">
+            <i class="ki-duotone ki-magnifier fs-5x mb-4"><span class="path1"></span><span class="path2"></span></i>
+            <h3 class="fw-bold mb-2">No se encontraron ventas</h3>
+            <p class="fs-7">Prueba con otros filtros o <a href="{% url 'sales:sale_list' %}" class="text-primary fw-bold">limpia los filtros</a>.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════ -->
-<!-- MODALES DE DEVOLUCIÓN (uno por venta SOLD) -->
-<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ══════════ MODALES DE DEVOLUCIÓN ══════════ -->
 {% for sale in sales %}
 {% if sale.status == 'SOLD' %}
 <div class="modal fade" id="returnModal-{{ sale.id }}" tabindex="-1" aria-hidden="true">
@@ -374,6 +494,21 @@
 {% endfor %}
 
 <script>
+    function applyStatus(val) {
+        document.getElementById('status-input').value = val;
+        document.getElementById('filter-form').submit();
+    }
+
+    function applyMethod(val) {
+        document.getElementById('method-input').value = val;
+        document.getElementById('filter-form').submit();
+    }
+
+    function applyDate(val) {
+        document.getElementById('date-filter-input').value = val;
+        document.getElementById('filter-form').submit();
+    }
+
     function confirmDelete(formId, itemName) {
         Swal.fire({
             text: "¿Eliminar la venta '" + itemName + "'?",
