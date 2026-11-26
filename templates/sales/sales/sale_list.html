@@ -86,19 +86,19 @@
                 </button>
                 <button type="button" class="btn btn-sm {% if method_filter == 'CASH_MXN' %}btn-primary{% else %}btn-light{% endif %}"
                         onclick="applyMethod('CASH_MXN')">
-                    💵 MXN ({{ method_counts.CASH_MXN|default:0 }})
+                     MXN ({{ method_counts.CASH_MXN|default:0 }})
                 </button>
                 <button type="button" class="btn btn-sm {% if method_filter == 'CASH_USD' %}btn-success{% else %}btn-light{% endif %}"
                         onclick="applyMethod('CASH_USD')">
-                    💲 USD ({{ method_counts.CASH_USD|default:0 }})
+                     USD ({{ method_counts.CASH_USD|default:0 }})
                 </button>
                 <button type="button" class="btn btn-sm {% if method_filter == 'MIXED' %}btn-warning{% else %}btn-light{% endif %}"
                         onclick="applyMethod('MIXED')">
-                    🔀 Mixto ({{ method_counts.MIXED|default:0 }})
+                     Mixto ({{ method_counts.MIXED|default:0 }})
                 </button>
                 <button type="button" class="btn btn-sm {% if method_filter == 'TRANSFER' %}btn-info{% else %}btn-light{% endif %}"
                         onclick="applyMethod('TRANSFER')">
-                    🏦 Transf. ({{ method_counts.TRANSFER|default:0 }})
+                     Transf. ({{ method_counts.TRANSFER|default:0 }})
                 </button>
             </div>
 
@@ -188,13 +188,13 @@
                         </td>
                         <td>
                             {% if sale.payment_method == 'CASH_MXN' %}
-                                <span class="badge badge-light-primary fs-8">💵 MXN</span>
+                                <span class="badge badge-light-primary fs-8"> MXN</span>
                             {% elif sale.payment_method == 'CASH_USD' %}
-                                <span class="badge badge-light-success fs-8">💲 USD</span>
+                                <span class="badge badge-light-success fs-8"> USD</span>
                             {% elif sale.payment_method == 'MIXED' %}
-                                <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
+                                <span class="badge badge-light-warning fs-8"> Mixto</span>
                             {% else %}
-                                <span class="badge badge-light-info fs-8">🏦 Transf.</span>
+                                <span class="badge badge-light-info fs-8"> Transf.</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
@@ -312,13 +312,13 @@
 
                 <div class="d-flex gap-1 flex-wrap mb-2">
                     {% if sale.payment_method == 'CASH_MXN' %}
-                        <span class="badge badge-light-primary fs-8">💵 MXN</span>
+                        <span class="badge badge-light-primary fs-8"> MXN</span>
                     {% elif sale.payment_method == 'CASH_USD' %}
-                        <span class="badge badge-light-success fs-8">💲 USD</span>
+                        <span class="badge badge-light-success fs-8"> USD</span>
                     {% elif sale.payment_method == 'MIXED' %}
-                        <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
+                        <span class="badge badge-light-warning fs-8"> Mixto</span>
                     {% else %}
-                        <span class="badge badge-light-info fs-8">🏦 Transferencia</span>
+                        <span class="badge badge-light-info fs-8">Transferencia</span>
                     {% endif %}
                     {% if sale.paid_usd > 0 %}
                         <span class="badge badge-light-dark fs-8">{{ sale.paid_usd }} USD @ ${{ sale.exchange_rate }}</span>

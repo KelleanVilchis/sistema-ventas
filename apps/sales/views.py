@@ -955,19 +955,93 @@ class DeleteExpenseView(BasePermissionMixin, View):
 
 
 class SaleReturnListView(BasePermissionMixin, View):
+    """Historial de devoluciones con filtros y paginación."""
     permission_required = "sales.view_salereturn"
 
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
-        returns = (
+
+        # ─── Filtros ───
+        search = request.GET.get('q', '').strip()
+        date_filter = request.GET.get('date_filter', 'ALL')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+
+        base = (
             SaleReturn.objects
             .filter(company=company)
-            .select_related("sale", "order", "created_by")
-            .prefetch_related("items__product")
-            .order_by("-created_at")
+            .select_related('sale', 'order', 'created_by')
+            .prefetch_related('items__product')
         )
-        return render(request, "sales/return/index.html", {"returns": returns})
+
+        # Búsqueda: folio devolución, folio venta, folio pedido, cliente
+        if search:
+            base = base.filter(
+                Q(folio_number__icontains=search) |
+                Q(sale__folio_number__icontains=search) |
+                Q(order__folio_number__icontains=search) |
+                Q(order__customer__icontains=search)
+            )
+
+        # Filtro por fecha
+        today = timezone.now().date()
+        if date_filter == 'TODAY':
+            base = base.filter(created_at__date=today)
+        elif date_filter == 'YESTERDAY':
+            base = base.filter(created_at__date=today - timedelta(days=1))
+        elif date_filter == 'LAST_7':
+            base = base.filter(created_at__date__gte=today - timedelta(days=7))
+        elif date_filter == 'THIS_MONTH':
+            base = base.filter(created_at__year=today.year, created_at__month=today.month)
+        elif date_filter == 'LAST_MONTH':
+            if today.month == 1:
+                base = base.filter(created_at__year=today.year - 1, created_at__month=12)
+            else:
+                base = base.filter(created_at__year=today.year, created_at__month=today.month - 1)
+        elif date_filter == 'CUSTOM':
+            if date_from:
+                base = base.filter(created_at__date__gte=date_from)
+            if date_to:
+                base = base.filter(created_at__date__lte=date_to)
+        else:
+            date_filter = 'ALL'
+
+        returns_qs = base.order_by('-created_at')
+
+        # Totales
+        totals = returns_qs.aggregate(
+            total_refunded=Sum('total_refunded'),
+        )
+
+        # Paginación
+        paginator = Paginator(returns_qs, 25)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        page_range = []
+        if paginator.count > 0:
+            for num in paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1):
+                if num == Paginator.ELLIPSIS:
+                    page_range.append({'is_ellipsis': True, 'number': None})
+                else:
+                    page_range.append({'is_ellipsis': False, 'number': num})
+
+        params = request.GET.copy()
+        params.pop('page', None)
+        page_qs = params.urlencode()
+
+        return render(request, "sales/return/index.html", {
+            'returns': page_obj,
+            'page_obj': page_obj,
+            'paginator': paginator,
+            'page_range': page_range,
+            'page_qs': page_qs,
+            'search': search,
+            'date_filter': date_filter,
+            'date_from': date_from,
+            'date_to': date_to,
+            'totals': totals,
+        })
 
 
 
@@ -1348,30 +1422,104 @@ class ShiftCloseView(BasePermissionMixin, View):
 
 
 class ShiftListView(BasePermissionMixin, View):
-    """Historial de turnos (cortes de caja)."""
+    """Historial de turnos (cortes de caja) con filtros y paginación."""
     permission_required = "sales.view_shift"
 
     def get(self, request):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
 
-        shifts = (
-            Shift.objects
-            .filter(company=company)
-            .select_related('opened_by', 'closed_by')
-            .order_by('-opened_at')
+        # ─── Filtros ───
+        search = request.GET.get('q', '').strip()
+        status_filter = request.GET.get('status', 'ALL')
+        date_filter = request.GET.get('date_filter', 'ALL')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+
+        base = Shift.objects.filter(company=company).select_related('opened_by', 'closed_by')
+
+        # Búsqueda: #ID, usuario que abrió o cerró
+        if search:
+            search_id = search.lstrip('#').strip()
+            q_filter = (
+                Q(opened_by__username__icontains=search) |
+                Q(closed_by__username__icontains=search)
+            )
+            if search_id.isdigit():
+                q_filter |= Q(id=int(search_id))
+            base = base.filter(q_filter)
+
+        # Filtro por fecha
+        today = timezone.now().date()
+        if date_filter == 'TODAY':
+            base = base.filter(opened_at__date=today)
+        elif date_filter == 'YESTERDAY':
+            base = base.filter(opened_at__date=today - timedelta(days=1))
+        elif date_filter == 'LAST_7':
+            base = base.filter(opened_at__date__gte=today - timedelta(days=7))
+        elif date_filter == 'THIS_MONTH':
+            base = base.filter(opened_at__year=today.year, opened_at__month=today.month)
+        elif date_filter == 'LAST_MONTH':
+            if today.month == 1:
+                base = base.filter(opened_at__year=today.year - 1, opened_at__month=12)
+            else:
+                base = base.filter(opened_at__year=today.year, opened_at__month=today.month - 1)
+        elif date_filter == 'CUSTOM':
+            if date_from:
+                base = base.filter(opened_at__date__gte=date_from)
+            if date_to:
+                base = base.filter(opened_at__date__lte=date_to)
+        else:
+            date_filter = 'ALL'
+
+        # Conteos por estado (antes del filtro de estado)
+        counts_qs = base.values('status').annotate(n=Count('id'))
+        status_counts = {row['status']: row['n'] for row in counts_qs}
+        total_all = sum(status_counts.values())
+
+        # Filtro por estado
+        if status_filter in ('OPEN', 'CLOSED'):
+            base = base.filter(status=status_filter)
+        else:
+            status_filter = 'ALL'
+
+        shifts_qs = base.order_by('-opened_at')
+
+        # Totales
+        totals = shifts_qs.aggregate(
+            total_ventas=Sum('opening_cash'),
         )
 
-        # Resumen global
-        total_shifts = shifts.count()
-        abiertos = shifts.filter(status='OPEN').count()
+        # Paginación
+        paginator = Paginator(shifts_qs, 25)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        page_range = []
+        if paginator.count > 0:
+            for num in paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1):
+                if num == Paginator.ELLIPSIS:
+                    page_range.append({'is_ellipsis': True, 'number': None})
+                else:
+                    page_range.append({'is_ellipsis': False, 'number': num})
+
+        params = request.GET.copy()
+        params.pop('page', None)
+        page_qs = params.urlencode()
 
         return render(request, 'pos/shift_list.html', {
-            'shifts': shifts,
-            'total_shifts': total_shifts,
-            'abiertos': abiertos,
+            'shifts': page_obj,
+            'page_obj': page_obj,
+            'paginator': paginator,
+            'page_range': page_range,
+            'page_qs': page_qs,
+            'search': search,
+            'status_filter': status_filter,
+            'date_filter': date_filter,
+            'date_from': date_from,
+            'date_to': date_to,
+            'status_counts': status_counts,
+            'total_all': total_all,
         })
-
 
 class ShiftDetailView(BasePermissionMixin, View):
     """Detalle de un turno: ventas, gastos, devoluciones y cuadre."""
