@@ -203,6 +203,44 @@ class OrderListView(BasePermissionMixin, View):
         )
         return render(request, "sales/order/index.html", {"orders": orders})
 
+
+
+class OrderDetailView(BasePermissionMixin, View):
+    permission_required = "sales.view_order"
+
+    def get(self, request, order_id):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        order = get_object_or_404(
+            Order.objects
+            .select_related('company', 'currency', 'created_by')
+            .prefetch_related('items__product', 'items__combo', 'sales'),
+            id=order_id,
+            company=company,
+        )
+
+        # Venta activa (si existe)
+        sale = order.sales.filter(status='SOLD').first()
+
+        # Devoluciones del pedido
+        returns = (
+            order.returns
+            .select_related('sale', 'created_by')
+            .prefetch_related('items__product')
+            .order_by('-created_at')
+        )
+
+        total_devuelto = sum(r.total_refunded for r in returns)
+
+        return render(request, 'sales/order/detail.html', {
+            'order': order,
+            'sale': sale,
+            'returns': returns,
+            'total_devuelto': total_devuelto,
+        })
+
+
 class CreateOrderView(BasePermissionMixin, View):
     permission_required = 'sales.add_order'
 

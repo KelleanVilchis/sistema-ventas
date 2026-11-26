@@ -34,18 +34,6 @@
                     <input type="number" step="0.01" min="0" name="amount" value="{{ amount|default:'' }}" class="form-control form-control-solid bg-transparent" placeholder="0.00" required />
                 </div>
                 <div class="col-lg-6 fv-row">
-                    <label class="form-label fw-semibold fs-6">Moneda</label>
-                    <select name="currency" class="form-select form-select-solid bg-transparent">
-                        <option value="">Selecciona una moneda...</option>
-                        {% for cur in currencies %}
-                            <option value="{{ cur.id }}" {% if currency_id == cur.id|stringformat:"i" %}selected{% endif %}>{{ cur.name }} ({{ cur.code }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <div class="row mb-6">
-                <div class="col-lg-6 fv-row">
                     <label class="form-label required fw-semibold fs-6">Tipo de gasto</label>
                     <select name="expense_type" class="form-select form-select-solid bg-transparent" required>
                         {% for code, label in type_choices %}
@@ -56,6 +44,9 @@
                         Clasifica el egreso para los reportes.
                     </div>
                 </div>
+            </div>
+
+            <div class="row mb-6">
                 <div class="col-lg-6 fv-row">
                     <label class="form-label required fw-semibold fs-6">Fecha y Hora del Gasto</label>
                     <input type="datetime-local" name="date_expense" class="form-control form-control-solid bg-transparent" required />

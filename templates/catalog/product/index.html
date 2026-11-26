@@ -55,16 +55,16 @@
                         </td>
                         <td>
                             {% if product.category %}
-                                <span class="badge badge-light-info fw-semibold fs-7">{{ product.category.name }}</span>
+                                <span class="badge fw-semibold fs-7">{{ product.category.name }}</span>
                             {% else %}
                                 <span class="text-muted fs-7">Sin Categoría</span>
                             {% endif %}
                         </td>
                         <td class="text-center">
                             {% if product.status == 'ACTIVE' %}
-                                <span class="badge badge-light-success fw-bold">Activo</span>
+                                <span class="badge badge-success fw-bold">Activo</span>
                             {% else %}
-                                <span class="badge badge-light-danger fw-bold">Inactivo</span>
+                                <span class="badge badge-danger fw-bold">Inactivo</span>
                             {% endif %}
                         </td>
                         <td class="text-end">${{ product.purchase_price }}</td>

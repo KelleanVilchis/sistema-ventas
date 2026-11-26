@@ -54,19 +54,19 @@
             </a>
             <a href="?status={{ status_filter }}&method=CASH_MXN"
                class="btn btn-sm {% if method_filter == 'CASH_MXN' %}btn-primary{% else %}btn-light{% endif %}">
-                💵 Efectivo MXN
+                 Efectivo MXN
             </a>
             <a href="?status={{ status_filter }}&method=CASH_USD"
                class="btn btn-sm {% if method_filter == 'CASH_USD' %}btn-success{% else %}btn-light{% endif %}">
-                💲 Efectivo USD
+                 Efectivo USD
             </a>
             <a href="?status={{ status_filter }}&method=MIXED"
                class="btn btn-sm {% if method_filter == 'MIXED' %}btn-warning{% else %}btn-light{% endif %}">
-                🔀 Mixto
+                 Mixto
             </a>
             <a href="?status={{ status_filter }}&method=TRANSFER"
                class="btn btn-sm {% if method_filter == 'TRANSFER' %}btn-info{% else %}btn-light{% endif %}">
-                🏦 Transferencia
+                 Transferencia
             </a>
         </div>
 
@@ -110,31 +110,31 @@
                 <tbody class="text-gray-600 fw-semibold">
                     {% for sale in sales %}
                     <tr>
-                        <td><span class="badge badge-light-primary fw-bold fs-7">{{ sale.folio_number }}</span></td>
-                        <td><span class="badge badge-light-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
+                        <td><span class="badge badge-primary fw-bold fs-7">{{ sale.folio_number }}</span></td>
+                        <td><span class="badge badge-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
                         <td>
                             <span class="text-gray-800 fw-bold">{{ sale.order.customer }}</span>
                         </td>
                         <td class="text-center">
                             {% if sale.status == 'SOLD' %}
-                                <span class="badge badge-light-success fw-bold">Vendido</span>
+                                <span class="badge badge-success fw-bold">Vendido</span>
                             {% elif sale.status == 'RETURNED' %}
-                                <span class="badge badge-light-warning fw-bold">Devuelto</span>
+                                <span class="badge badge-warning fw-bold">Devuelto</span>
                             {% elif sale.status == 'CANCELLED' %}
-                                <span class="badge badge-light-danger fw-bold">Cancelado</span>
+                                <span class="badge badge-danger fw-bold">Cancelado</span>
                             {% else %}
-                                <span class="badge badge-light-info fw-bold">En espera</span>
+                                <span class="badge badge-info fw-bold">En espera</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if sale.payment_method == 'CASH_MXN' %}
-                                <span class="badge badge-light-primary fs-8">💵 MXN</span>
+                                <span class="badge badge-primary fs-8"> MXN</span>
                             {% elif sale.payment_method == 'CASH_USD' %}
-                                <span class="badge badge-light-success fs-8">💲 USD</span>
+                                <span class="badge badge-success fs-8"> USD</span>
                             {% elif sale.payment_method == 'MIXED' %}
-                                <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
+                                <span class="badge badge-warning fs-8"> Mixto</span>
                             {% else %}
-                                <span class="badge badge-light-info fs-8">🏦 Transf.</span>
+                                <span class="badge badge-info fs-8"> Transf.</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
@@ -252,13 +252,13 @@
 
                 <div class="d-flex gap-1 flex-wrap mb-2">
                     {% if sale.payment_method == 'CASH_MXN' %}
-                        <span class="badge badge-light-primary fs-8">💵 MXN</span>
+                        <span class="badge badge-light-primary fs-8"> MXN</span>
                     {% elif sale.payment_method == 'CASH_USD' %}
-                        <span class="badge badge-light-success fs-8">💲 USD</span>
+                        <span class="badge badge-light-success fs-8"> USD</span>
                     {% elif sale.payment_method == 'MIXED' %}
-                        <span class="badge badge-light-warning fs-8">🔀 Mixto</span>
+                        <span class="badge badge-light-warning fs-8"> Mixto</span>
                     {% else %}
-                        <span class="badge badge-light-info fs-8">🏦 Transferencia</span>
+                        <span class="badge badge-light-info fs-8"> Transferencia</span>
                     {% endif %}
                     {% if sale.paid_usd > 0 %}
                         <span class="badge badge-light-dark fs-8">{{ sale.paid_usd }} USD @ ${{ sale.exchange_rate }}</span>

@@ -27,22 +27,22 @@
         <div class="row g-4 mb-8">
             <div class="col-md-3">
                 <div class="card bg-light-primary border-0 p-4 h-100">
-                    <span class="text-muted fs-8 fw-semibold">Precio de compra</span>
-                    <span class="fw-bold fs-2 text-primary">${{ purchase_total|floatformat:2 }}</span>
+                    <span class=" fs-8 fw-semibold">Precio de compra</span>
+                    <span class="fw-bold fs-2">${{ purchase_total|floatformat:2 }}</span>
                     <span class="text-muted fs-9">Costo total de insumos</span>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card bg-light-success border-0 p-4 h-100">
-                    <span class="text-muted fs-8 fw-semibold">Precio de venta</span>
-                    <span class="fw-bold fs-2 text-success">${{ sale_total|floatformat:2 }}</span>
+                    <span class=" fs-8 fw-semibold">Precio de venta</span>
+                    <span class="fw-bold fs-2 ">${{ sale_total|floatformat:2 }}</span>
                     <span class="text-muted fs-9">Precio al público</span>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card {% if margin >= 0 %}bg-light-info{% else %}bg-light-danger{% endif %} border-0 p-4 h-100">
-                    <span class="text-muted fs-8 fw-semibold">Margen de ganancia</span>
-                    <span class="fw-bold fs-2 {% if margin >= 0 %}text-info{% else %}text-danger{% endif %}">
+                    <span class=" fs-8 fw-semibold">Margen de ganancia</span>
+                    <span class="fw-bold fs-2">
                         ${{ margin|floatformat:2 }}
                     </span>
                     <span class="text-muted fs-9">Ganancia por combo</span>
@@ -50,8 +50,8 @@
             </div>
             <div class="col-md-3">
                 <div class="card {% if margin_pct >= 30 %}bg-light-success{% elif margin_pct >= 15 %}bg-light-warning{% else %}bg-light-danger{% endif %} border-0 p-4 h-100">
-                    <span class="text-muted fs-8 fw-semibold">% Margen</span>
-                    <span class="fw-bold fs-2 {% if margin_pct >= 30 %}text-success{% elif margin_pct >= 15 %}text-warning{% else %}text-danger{% endif %}">
+                    <span class=" fs-8 fw-semibold">% Margen</span>
+                    <span class="fw-bold fs-2">
                         {{ margin_pct|floatformat:1 }}%
                     </span>
                     <span class="text-muted fs-9">Sobre el costo</span>

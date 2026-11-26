@@ -33,11 +33,10 @@
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                         <th class="min-w-125px">Folio</th>
                         <th class="min-w-150px">Cliente</th>
-                        <th class="min-w-125px">Sucursal</th>
                         <th class="min-w-100px text-center">Estado</th>
                         <th class="min-w-100px text-end">Total</th>
                         <th class="min-w-125px">Fecha</th>
-                        <th class="text-end min-w-150px">Acciones</th>
+                        <th class="text-end min-w-200px">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="text-gray-600 fw-semibold">
@@ -46,18 +45,13 @@
                         <td><span class="badge badge-light-dark fw-bold fs-7">{{ order.folio_number|default:order.id }}</span></td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="symbol symbol-circle symbol-35px me-2">
-                                    <div class="symbol-label fs-7 bg-light-primary text-primary fw-bold">
-                                        {{ order.customer|slice:":1"|upper }}
-                                    </div>
-                                </div>
+                                
                                 <span class="text-gray-800 fw-bold">{{ order.customer }}</span>
                             </div>
                         </td>
-                        <td><span class="badge badge-light-info fw-bold">{{ order.company.name }}</span></td>
                         <td class="text-center">
                             {% if order.status == 'COMPLETED' %}
-                                <span class="badge badge-light-success fw-bold">Completado</span>
+                                <span class="badge badge-success fw-bold">Completado</span>
                             {% elif order.status == 'ACCEPTED' %}
                                 <span class="badge badge-light-primary fw-bold">Aceptado</span>
                             {% elif order.status == 'CANCELLED' %}
@@ -81,7 +75,7 @@
                                     </button>
                                 </form>
 
-                            {# ─── COMPLETED sin venta: botón Vender ACTIVO (ícono verde) ─── #}
+                            {# ─── COMPLETED sin venta: botón Vender (ícono verde) ─── #}
                             {% elif order.status == 'COMPLETED' and not order.is_sold %}
                                 <form id="sell-form-ord-{{ order.id }}" action="{% url 'sales:order_sell' order.id %}" method="POST" class="d-inline">
                                     {% csrf_token %}
@@ -92,15 +86,13 @@
                                     </button>
                                 </form>
 
-                            {# ─── COMPLETED con venta: DESHABILITADO (igual que edit) ─── #}
+                            {# ─── COMPLETED con venta: mismo ícono, deshabilitado ─── #}
                             {% elif order.status == 'COMPLETED' and order.is_sold %}
                                 <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
-                                      title="Pedido ya vendido — no se puede volver a vender"
+                                      title="Pedido ya vendido"
                                       aria-disabled="true"
                                       style="pointer-events: none; opacity: .55;">
-                                    <i class="ki-duotone ki-dollar fs-3 text-muted">
-                                        <span class="path1"></span><span class="path2"></span><span class="path3"></span>
-                                    </i>
+                                    <i class="ki-duotone ki-dollar fs-3 text-muted"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
                                 </span>
 
                             {# ─── CANCELLED: deshabilitado ─── #}
@@ -109,11 +101,16 @@
                                       title="Pedido cancelado"
                                       aria-disabled="true"
                                       style="pointer-events: none; opacity: .55;">
-                                    <i class="ki-duotone ki-check-circle fs-3 text-muted">
-                                        <span class="path1"></span><span class="path2"></span>
-                                    </i>
+                                    <i class="ki-duotone ki-check-circle fs-3 text-muted"><span class="path1"></span><span class="path2"></span></i>
                                 </span>
                             {% endif %}
+
+                            {# ─── Ver detalle ─── #}
+                            <a href="{% url 'sales:order_detail' order.id %}"
+                               class="btn btn-icon btn-bg-light btn-active-color-info btn-sm me-1"
+                               title="Ver detalle">
+                                <i class="ki-duotone ki-eye fs-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                            </a>
 
                             {# ─── Editar (bloqueado si COMPLETED o CANCELLED) ─── #}
                             {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
@@ -175,7 +172,7 @@
                                 {% csrf_token %}
                             </form>
 
-                        {# ─── COMPLETED sin venta: Vender ACTIVO (ícono verde) ─── #}
+                        {# ─── COMPLETED sin venta: botón Vender (ícono verde) ─── #}
                         {% elif order.status == 'COMPLETED' and not order.is_sold %}
                             <button type="button" class="btn btn-icon btn-bg-light btn-active-color-success btn-sm me-1 text-success"
                                     title="Registrar venta"
@@ -186,15 +183,13 @@
                                 {% csrf_token %}
                             </form>
 
-                        {# ─── COMPLETED con venta: DESHABILITADO ─── #}
+                        {# ─── COMPLETED con venta: mismo ícono, deshabilitado ─── #}
                         {% elif order.status == 'COMPLETED' and order.is_sold %}
                             <span class="btn btn-icon btn-bg-light btn-sm me-1 disabled"
-                                  title="Pedido ya vendido — no se puede volver a vender"
+                                  title="Pedido ya vendido"
                                   aria-disabled="true"
                                   style="pointer-events: none; opacity: .55;">
-                                <i class="ki-duotone ki-dollar fs-4 text-muted">
-                                    <span class="path1"></span><span class="path2"></span><span class="path3"></span>
-                                </i>
+                                <i class="ki-duotone ki-dollar fs-4 text-muted"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
                             </span>
 
                         {# ─── CANCELLED: deshabilitado ─── #}
@@ -203,11 +198,15 @@
                                   title="Pedido cancelado"
                                   aria-disabled="true"
                                   style="pointer-events: none; opacity: .55;">
-                                <i class="ki-duotone ki-check-circle fs-4 text-muted">
-                                    <span class="path1"></span><span class="path2"></span>
-                                </i>
+                                <i class="ki-duotone ki-check-circle fs-4 text-muted"><span class="path1"></span><span class="path2"></span></i>
                             </span>
                         {% endif %}
+
+                        {# ─── Ver detalle ─── #}
+                        <a href="{% url 'sales:order_detail' order.id %}"
+                           class="btn btn-icon btn-bg-light btn-active-color-info btn-sm me-1">
+                            <i class="ki-duotone ki-eye fs-4"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                        </a>
 
                         {# ─── Editar (bloqueado si COMPLETED o CANCELLED) ─── #}
                         {% if order.status == 'COMPLETED' or order.status == 'CANCELLED' %}
@@ -246,11 +245,6 @@
                 <div class="d-flex justify-content-between align-items-center my-2">
                     <span class="text-gray-800 fw-bold">{{ order.customer }}</span>
                     <span class="fw-bold text-success fs-6">${{ order.total_amount }}</span>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center text-muted fs-8 mt-2">
-                    <span>{{ order.company.name }}</span>
-                    <span>Status: <strong>{{ order.get_status_display }}</strong></span>
                 </div>
             </div>
             {% empty %}
