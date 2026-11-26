@@ -237,7 +237,7 @@
                                             {{ user.get_full_name|default:user.username }}
                                         </span>
                                         <span class="text-white opacity-75 fs-8">
-                                            Administrador
+                                            {{user.user_type}}
                                         </span>
                                     </div>
 
@@ -329,6 +329,16 @@
                                             <span class="menu-title">Compañías</span>
                                         </a>
                                     </div>
+
+                                    <!-- Usuarios -->
+                                    {% if perms.accounts.view_appuser %}
+                                    <div class="menu-item me-lg-2">
+                                        <a href="{% url 'accounts:list_users' %}"
+                                           class="menu-link {% if '/accounts/' in request.path %}active{% endif %}">
+                                            <span class="menu-title">Usuarios</span>
+                                        </a>
+                                    </div>
+                                    {% endif %}
 
                                     <!-- Catálogo (Desplegable) -->
                                     <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"

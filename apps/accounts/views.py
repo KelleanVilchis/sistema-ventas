@@ -6,8 +6,8 @@ from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
 from .models import AppUser, UserType
+from django.contrib.auth.models import Group
 from .forms import LoginForm
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from apps.company.mixins import BasePermissionMixin
 
 class CreateUserView(BasePermissionMixin, View):
@@ -16,7 +16,8 @@ class CreateUserView(BasePermissionMixin, View):
     def get(self, request):
         # Pasamos los tipos de usuario disponibles (ADM / EMP) para llenar el <select> en el HTML
         context = {
-            'user_types': UserType.choices
+            'user_types': UserType.choices,
+            'groups': Group.objects.all(),
         }
         return render(request, 'accounts/register.html', context)
 
@@ -26,13 +27,15 @@ class CreateUserView(BasePermissionMixin, View):
         first_name = request.POST.get('first_name')
         last_name = request.POST.get('last_name')
         user_type = request.POST.get('user_type')
+        group_id = request.POST.get('group')
 
         context = {
             'email': email,
             'first_name': first_name,
             'last_name': last_name,
             'user_type': user_type,
-            'user_types': UserType.choices
+            'user_types': UserType.choices,
+            'groups': Group.objects.all(),
         }
 
         # Validación básica
@@ -54,12 +57,21 @@ class CreateUserView(BasePermissionMixin, View):
                 user.user_type = user_type
                 user.save()
 
+            # Asignación opcional del grupo de permisos si viene en el POST
+            if user.user_type == 'ADM':
+                grupo = Group.objects.get(name='Administradores')
+                user.groups.add(grupo)
+            elif user.user_type == "EMP":
+                grupo = Group.objects.get(name='Empleados')
+                user.groups.add(grupo)
+
             messages.success(request, 'Usuario registrado exitosamente en Distrito 21.')
             return redirect('accounts:list_users') # Lo ideal al tener éxito es redirigir a la lista
             
         except Exception as e:
             messages.error(request, f'Ocurrió un error al registrar el usuario: {e}')
             return render(request, 'accounts/register.html', context)
+
 
 class ListUsersView(BasePermissionMixin, View):
     permission_required = 'accounts.view_appuser'
@@ -87,7 +99,8 @@ class EditUserView(BasePermissionMixin, View):
         user_obj = get_object_or_404(AppUser, id=user_id)
         context = {
             'edit_user': user_obj,
-            'user_types': UserType.choices
+            'user_types': UserType.choices,
+            'groups': Group.objects.all(),
         }
         return render(request, 'accounts/edit.html', context)
 
@@ -100,10 +113,12 @@ class EditUserView(BasePermissionMixin, View):
         user_type = request.POST.get('user_type')
         is_active = True if request.POST.get('is_active') == 'on' else False
         password = request.POST.get('password') # Opcional por si desea cambiarla
+        group_ids = request.POST.getlist('groups')
 
         context = {
             'edit_user': user_obj,
-            'user_types': UserType.choices
+            'user_types': UserType.choices,
+            'groups': Group.objects.all(),
         }
 
         if not email or not first_name or not last_name:
@@ -122,6 +137,11 @@ class EditUserView(BasePermissionMixin, View):
                 user_obj.set_password(password)
 
             user_obj.save()
+
+            # Si envían grupos desde el formulario, sincronizamos sus grupos
+            if 'groups' in request.POST:
+                user_obj.groups.set(group_ids)
+
             messages.success(request, 'Usuario actualizado exitosamente.')
             return redirect('accounts:list_users')
             

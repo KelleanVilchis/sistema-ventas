@@ -1,11 +1,12 @@
 from decimal import Decimal
 
 from django.db.models import Sum, Count, Q
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 
+from apps.company.mixins import BasePermissionMixin
 from apps.company.models import Company
 from apps.accounts.models import AppUser
 from apps.sales.models import Sale, SaleReturn, Expense, Order
@@ -111,3 +112,14 @@ class DashboardView(LoginRequiredMixin, View):
             'ventas_recientes': ventas_recientes,
         }
         return render(request, 'dashboard/dashboard.html', context)
+
+
+class ListUsersView(BasePermissionMixin, View):
+    permission_required = 'accounts.view_appuser'
+
+    def get(self, request):
+        user = AppUser.objects.get(id=request.user.id)
+        if user.user_type == "EMP":
+            return redirect('dashboard')
+        users = AppUser.objects.all()
+        return render(request, 'accounts/index.html', {'users': users})
