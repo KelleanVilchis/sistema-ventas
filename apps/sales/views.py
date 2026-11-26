@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from django.db.models import Exists, OuterRef, Count, Sum
+from django.db.models import Exists, OuterRef, Count, Sum, Q
 from django.db import transaction
 from django.http import request
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,6 +14,9 @@ from apps.accounts.models import AppUser
 from apps.company.mixins import BasePermissionMixin  # Import the BasePermissionMixin
 from django.http import JsonResponse
 from apps.sales.models import Shift
+from datetime import timedelta
+from django.core.paginator import Paginator
+
 
 
 
@@ -191,17 +194,109 @@ class OrderListView(BasePermissionMixin, View):
         owner = AppUser.objects.get(id=request.user.id)
         company = Company.objects.get(selected=True, owner=owner)
 
-        # Cualquier venta (SOLD, RETURNED, CANCELLED) bloquea la re-venta
+        # ─── Filtros ───
+        search = request.GET.get('q', '').strip()
+        status_filter = request.GET.get('status', 'ALL')
+        date_filter = request.GET.get('date_filter', 'ALL')
+        date_from = request.GET.get('date_from', '')
+        date_to = request.GET.get('date_to', '')
+        customer_filter = request.GET.get('customer', '').strip()
+
+        # ─── Queryset base (TU lógica original) ───
         any_sale = Sale.objects.filter(order=OuterRef("pk"))
 
-        orders = (
-            Order.objects
-            .filter(company=company)
+        base = Order.objects.filter(company=company)
+
+        # Búsqueda por folio o cliente
+        if search:
+            base = base.filter(
+                Q(folio_number__icontains=search) | Q(customer__icontains=search)
+            )
+
+        # Filtro por cliente específico
+        if customer_filter:
+            base = base.filter(customer__icontains=customer_filter)
+
+        # Filtro por fecha
+        today = timezone.now().date()
+        if date_filter == 'TODAY':
+            base = base.filter(created_at__date=today)
+        elif date_filter == 'YESTERDAY':
+            base = base.filter(created_at__date=today - timedelta(days=1))
+        elif date_filter == 'LAST_7':
+            base = base.filter(created_at__date__gte=today - timedelta(days=7))
+        elif date_filter == 'THIS_MONTH':
+            base = base.filter(created_at__year=today.year, created_at__month=today.month)
+        elif date_filter == 'LAST_MONTH':
+            if today.month == 1:
+                base = base.filter(created_at__year=today.year - 1, created_at__month=12)
+            else:
+                base = base.filter(created_at__year=today.year, created_at__month=today.month - 1)
+        elif date_filter == 'CUSTOM':
+            if date_from:
+                base = base.filter(created_at__date__gte=date_from)
+            if date_to:
+                base = base.filter(created_at__date__lte=date_to)
+        else:
+            date_filter = 'ALL'
+
+        # ─── Conteos por estado (antes del filtro de estado) ───
+        counts_qs = base.values('status').annotate(n=Count('id'))
+        status_counts = {row['status']: row['n'] for row in counts_qs}
+        total_all = sum(status_counts.values())
+
+        # ─── Filtro por estado ───
+        if status_filter in ('PENDING', 'ACCEPTED', 'COMPLETED', 'CANCELLED'):
+            base = base.filter(status=status_filter)
+        else:
+            status_filter = 'ALL'
+
+        # ─── Anotación + orden (TU lógica original) ───
+        orders_qs = (
+            base
             .select_related("company")
-            .annotate(is_sold=Exists(any_sale))   # ← nombre igual, lógica distinta
+            .annotate(is_sold=Exists(any_sale))
             .order_by("-created_at")
         )
-        return render(request, "sales/order/index.html", {"orders": orders})
+
+        # ─── Stats ───
+        stats = orders_qs.aggregate(
+            total_count=Count('id'),
+            total_amount=Sum('total_amount'),
+        )
+
+        # ─── Paginación ───
+        paginator = Paginator(orders_qs, 25)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+
+        page_range = []
+        if paginator.count > 0:
+            for num in paginator.get_elided_page_range(page_obj.number, on_each_side=2, on_ends=1):
+                if num == Paginator.ELLIPSIS:
+                    page_range.append({'is_ellipsis': True, 'number': None})
+                else:
+                    page_range.append({'is_ellipsis': False, 'number': num})
+
+        params = request.GET.copy()
+        params.pop('page', None)
+        page_qs = params.urlencode()
+
+        return render(request, "sales/order/index.html", {
+            'orders': page_obj,
+            'page_obj': page_obj,
+            'paginator': paginator,
+            'page_range': page_range,
+            'page_qs': page_qs,
+            'search': search,
+            'status_filter': status_filter,
+            'date_filter': date_filter,
+            'date_from': date_from,
+            'date_to': date_to,
+            'customer_filter': customer_filter,
+            'status_counts': status_counts,
+            'total_all': total_all,
+            'stats': stats,
+        })
 
 
 

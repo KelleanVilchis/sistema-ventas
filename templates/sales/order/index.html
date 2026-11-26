@@ -26,6 +26,73 @@
             {% endfor %}
         {% endif %}
 
+        <!-- ══════════ FILTROS ══════════ -->
+        <form method="get" id="filter-form">
+            <input type="hidden" name="status" value="{{ status_filter }}" id="status-input">
+            <input type="hidden" name="date_filter" value="{{ date_filter }}" id="date-filter-input">
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <input type="text" name="q" value="{{ search }}"
+                           class="form-control form-control-solid"
+                           placeholder="🔍 Buscar folio o cliente...">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="ki-duotone ki-magnifier fs-3"><span class="path1"></span><span class="path2"></span></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pills estado -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="text-muted fw-semibold fs-7 me-2 align-self-center">Estado:</span>
+                <button type="button" class="btn btn-sm {% if status_filter == 'ALL' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('ALL')">
+                    Todos ({{ total_all }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'PENDING' %}btn-warning{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('PENDING')">
+                    En espera ({{ status_counts.PENDING|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'ACCEPTED' %}btn-info{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('ACCEPTED')">
+                    Aceptados ({{ status_counts.ACCEPTED|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'COMPLETED' %}btn-success{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('COMPLETED')">
+                    Completados ({{ status_counts.COMPLETED|default:0 }})
+                </button>
+                <button type="button" class="btn btn-sm {% if status_filter == 'CANCELLED' %}btn-danger{% else %}btn-light{% endif %}"
+                        onclick="applyStatus('CANCELLED')">
+                    Cancelados ({{ status_counts.CANCELLED|default:0 }})
+                </button>
+            </div>
+
+            <!-- Pills fecha -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="text-muted fw-semibold fs-7 me-2 align-self-center">Fecha:</span>
+                <button type="button" class="btn btn-sm {% if date_filter == 'ALL' %}btn-dark{% else %}btn-light{% endif %}"
+                        onclick="applyDate('ALL')">Todas</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'TODAY' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('TODAY')">Hoy</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'YESTERDAY' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('YESTERDAY')">Ayer</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'LAST_7' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('LAST_7')">Últimos 7 días</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'THIS_MONTH' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('THIS_MONTH')">Este mes</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'LAST_MONTH' %}btn-primary{% else %}btn-light{% endif %}"
+                        onclick="applyDate('LAST_MONTH')">Mes pasado</button>
+                <button type="button" class="btn btn-sm {% if date_filter == 'CUSTOM' %}btn-info{% else %}btn-light{% endif %}"
+                        onclick="applyDate('CUSTOM')">Rango personalizado</button>
+
+                <a href="{% url 'sales:order_list' %}" class="btn btn-sm btn-light-danger ms-auto">
+                    <i class="ki-duotone ki-cross-circle fs-7 me-1"><span class="path1"></span><span class="path2"></span></i>
+                    Limpiar
+                </a>
+            </div>
+        </form>
         <!-- TABLA (DESKTOP) -->
         <div class="table-responsive d-none d-md-block">
             <table class="table align-middle table-row-dashed fs-6 gy-5">
@@ -33,6 +100,7 @@
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                         <th class="min-w-125px">Folio</th>
                         <th class="min-w-150px">Cliente</th>
+                        <th class="min-w-125px">Sucursal</th>
                         <th class="min-w-100px text-center">Estado</th>
                         <th class="min-w-100px text-end">Total</th>
                         <th class="min-w-125px">Fecha</th>
@@ -45,13 +113,13 @@
                         <td><span class="badge badge-light-dark fw-bold fs-7">{{ order.folio_number|default:order.id }}</span></td>
                         <td>
                             <div class="d-flex align-items-center">
-                                
                                 <span class="text-gray-800 fw-bold">{{ order.customer }}</span>
                             </div>
                         </td>
+                        <td><span class="badge badge-light-info fw-bold">{{ order.company.name }}</span></td>
                         <td class="text-center">
                             {% if order.status == 'COMPLETED' %}
-                                <span class="badge badge-success fw-bold">Completado</span>
+                                <span class="badge badge-light-success fw-bold">Completado</span>
                             {% elif order.status == 'ACCEPTED' %}
                                 <span class="badge badge-light-primary fw-bold">Aceptado</span>
                             {% elif order.status == 'CANCELLED' %}
@@ -147,7 +215,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-10 text-muted">No hay pedidos registrados.</td></tr>
+                    <tr><td colspan="7" class="text-center py-10 text-muted">No hay pedidos registrados con estos filtros.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -246,15 +314,86 @@
                     <span class="text-gray-800 fw-bold">{{ order.customer }}</span>
                     <span class="fw-bold text-success fs-6">${{ order.total_amount }}</span>
                 </div>
+
+                <div class="d-flex justify-content-between align-items-center text-muted fs-8 mt-2">
+                    <span>{{ order.company.name }}</span>
+                    <span>Status: <strong>{{ order.get_status_display }}</strong></span>
+                </div>
             </div>
             {% empty %}
-            <div class="text-center py-10 text-muted fs-6">No hay pedidos registrados.</div>
+            <div class="text-center py-10 text-muted fs-6">No hay pedidos registrados con estos filtros.</div>
             {% endfor %}
         </div>
+
+        <!-- ══════════ PAGINACIÓN ══════════ -->
+        {% if paginator.num_pages > 1 %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-5">
+            <div class="text-muted fs-7">
+                Mostrando
+                <strong>{{ page_obj.start_index }}</strong>
+                a
+                <strong>{{ page_obj.end_index }}</strong>
+                de
+                <strong>{{ paginator.count }}</strong>
+                pedido{{ paginator.count|pluralize:"s" }}
+            </div>
+
+            <nav>
+                <ul class="pagination mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page=1">««</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ page_obj.previous_page_number }}">«</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">««</span></li>
+                        <li class="page-item disabled"><span class="page-link">«</span></li>
+                    {% endif %}
+
+                    {% for p in page_range %}
+                        {% if p.is_ellipsis %}
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        {% elif p.number == page_obj.number %}
+                            <li class="page-item active"><span class="page-link">{{ p.number }}</span></li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ p.number }}">{{ p.number }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ page_obj.next_page_number }}">»</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{{ page_qs }}{% if page_qs %}&{% endif %}page={{ paginator.num_pages }}">»»</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">»</span></li>
+                        <li class="page-item disabled"><span class="page-link">»»</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
     </div>
 </div>
 
 <script>
+    function applyStatus(val) {
+        document.getElementById('status-input').value = val;
+        document.getElementById('filter-form').submit();
+    }
+
+    function applyDate(val) {
+        document.getElementById('date-filter-input').value = val;
+        document.getElementById('filter-form').submit();
+    }
+
     function confirmDelete(formId, itemName) {
         Swal.fire({
             text: "Cancelar el pedido '" + itemName + "'?",
