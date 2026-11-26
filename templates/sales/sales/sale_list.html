@@ -169,7 +169,7 @@
                     {% for sale in sales %}
                     <tr>
                         <td><span class="badge badge-light-primary fw-bold fs-7">{{ sale.folio_number }}</span></td>
-                        <td><span class="badge badge-light-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
+                        <td><span class="badge badge-secondary fw-bold">{{ sale.order.folio_number|default:sale.order.id }}</span></td>
                         <td>
                             <div class="d-flex align-items-center">
                                 <span class="text-gray-800 fw-bold">{{ sale.order.customer }}</span>
@@ -177,13 +177,13 @@
                         </td>
                         <td class="text-center">
                             {% if sale.status == 'SOLD' %}
-                                <span class="badge badge-light-success fw-bold">Vendido</span>
+                                <span class="badge badge-success fw-bold">Vendido</span>
                             {% elif sale.status == 'RETURNED' %}
-                                <span class="badge badge-light-warning fw-bold">Devuelto</span>
+                                <span class="badge badge-warning fw-bold">Devuelto</span>
                             {% elif sale.status == 'CANCELLED' %}
-                                <span class="badge badge-light-danger fw-bold">Cancelado</span>
+                                <span class="badge badge-danger fw-bold">Cancelado</span>
                             {% else %}
-                                <span class="badge badge-light-info fw-bold">En espera</span>
+                                <span class="badge badge-info fw-bold">En espera</span>
                             {% endif %}
                         </td>
                         <td>

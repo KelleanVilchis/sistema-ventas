@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Modo Venta{% endblock %}
+{% block title %}Modo Venta | Distrito 21{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -87,6 +87,15 @@
         justify-content: center;
     }
     .cart-btn:hover { background: #f5f8fa; }
+
+    .category-section {
+        padding-bottom: 10px;
+    }
+    .category-section h3 {
+        border-bottom: 2px solid #f1f1f4;
+        padding-bottom: 8px;
+    }
+
     @media (max-width: 991.98px) {
         .pos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
         .pos-card-name { font-size: 12px; min-height: 30px; }
@@ -98,7 +107,7 @@
 {% block content %}
 <div class="row g-5">
 
-    <!-- COLUMNA IZQUIERDA: PRODUCTOS -->
+    <!-- ═══════════════ COLUMNA IZQUIERDA: PRODUCTOS ═══════════════ -->
     <div class="col-lg-8">
 
         <!-- Barra superior -->
@@ -135,46 +144,91 @@
 
         <!-- Tabs de categorías -->
         <div class="d-flex flex-wrap gap-2 mb-4">
-            <button class="btn btn-sm btn-primary pos-filter" data-cat="all">Todos</button>
+            <button type="button" class="btn btn-sm btn-primary pos-filter" data-cat="all">Todos</button>
             {% for cat_id, cat_name in categories %}
-                <button class="btn btn-sm btn-light pos-filter" data-cat="{{ cat_id }}">{{ cat_name }}</button>
+                <button type="button" class="btn btn-sm btn-light pos-filter" data-cat="{{ cat_id }}">{{ cat_name }}</button>
             {% endfor %}
         </div>
 
-        <!-- Grid de productos -->
-        <div class="pos-grid" id="products-grid">
-            {% for p in products %}
-            <div class="pos-card {% if p.status == 'INACTIVE' %}disabled{% endif %}"
-                 data-name="{{ p.name|lower }}"
-                 data-cat="{{ p.category_id|default:'' }}"
-                 data-type="product"
-                 data-id="{{ p.id }}"
-                 data-price="{{ p.sale_price }}"
-                 onclick="addToCart(this)">
-                <div class="pos-card-category">{{ p.category.name|default:"—" }}</div>
-                <div class="pos-card-name">{{ p.name }}</div>
-                <div class="pos-card-price">${{ p.sale_price }}</div>
+        <!-- ════════ PRODUCTOS AGRUPADOS POR CATEGORÍA ════════ -->
+        <div id="products-grouped">
+
+            {% regroup products by category as product_groups %}
+
+            {% for group in product_groups %}
+            <div class="category-section mb-5" data-section-cat="{% if group.grouper %}{{ group.grouper.id }}{% else %}uncategorized{% endif %}">
+
+                <h3 class="fw-bold fs-5 mb-3 d-flex align-items-center">
+                    <i class="ki-duotone ki-category fs-4 me-2 text-primary">
+                        <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                    </i>
+                    {{ group.grouper.name|default:"Sin categoría" }}
+                    <span class="badge badge-light ms-3 fs-8">{{ group.list|length }}</span>
+                </h3>
+
+                <div class="pos-grid">
+                    {% for p in group.list %}
+                    <div class="pos-card {% if p.status == 'INACTIVE' %}disabled{% endif %}"
+                         data-name="{{ p.name|lower }}"
+                         data-cat="{% if p.category_id %}{{ p.category_id }}{% else %}uncategorized{% endif %}"
+                         data-type="product"
+                         data-id="{{ p.id }}"
+                         data-price="{{ p.sale_price }}"
+                         onclick="addToCart(this)">
+                        <div class="pos-card-category">{{ p.category.name|default:"—" }}</div>
+                        <div class="pos-card-name">{{ p.name }}</div>
+                        <div class="pos-card-price">${{ p.sale_price }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
             </div>
             {% endfor %}
 
-            {% for c in combos %}
-            <div class="pos-card"
-                 data-name="{{ c.name|lower }}"
-                 data-cat=""
-                 data-type="combo"
-                 data-id="{{ c.id }}"
-                 data-price="{{ c.sale_price }}"
-                 onclick="addToCart(this)">
-                <div class="pos-card-category">Combo</div>
-                <div class="pos-card-name">{{ c.name }}</div>
-                <div class="pos-card-price">${{ c.sale_price }}</div>
+            <!-- Sección de combos -->
+            {% if combos %}
+            <div class="category-section mb-5" data-section-cat="combos">
+
+                <h3 class="fw-bold fs-5 mb-3 d-flex align-items-center">
+                    <i class="ki-duotone ki-package fs-4 me-2 text-warning">
+                        <span class="path1"></span><span class="path2"></span>
+                    </i>
+                    Combos
+                    <span class="badge badge-light ms-3 fs-8">{{ combos|length }}</span>
+                </h3>
+
+                <div class="pos-grid">
+                    {% for c in combos %}
+                    <div class="pos-card"
+                         data-name="{{ c.name|lower }}"
+                         data-cat="combos"
+                         data-type="combo"
+                         data-id="{{ c.id }}"
+                         data-price="{{ c.sale_price }}"
+                         onclick="addToCart(this)">
+                        <div class="pos-card-category">Combo</div>
+                        <div class="pos-card-name">{{ c.name }}</div>
+                        <div class="pos-card-price">${{ c.sale_price }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
             </div>
-            {% endfor %}
+            {% endif %}
+
+            <!-- Empty state -->
+            {% if not products and not combos %}
+            <div class="text-center py-15 text-muted">
+                <i class="ki-duotone ki-box fs-5x mb-3"><span class="path1"></span><span class="path2"></span><span class="path3"></span></i>
+                <p>No hay productos disponibles. Agrega productos desde Catálogo.</p>
+            </div>
+            {% endif %}
+
         </div>
 
     </div>
 
-    <!-- COLUMNA DERECHA: CARRITO -->
+    <!-- ═══════════════ COLUMNA DERECHA: CARRITO ═══════════════ -->
     <div class="col-lg-4">
         <div class="card" style="position: sticky; top: 20px;">
             <div class="card-header bg-light-primary py-4">
@@ -214,7 +268,7 @@
     </div>
 </div>
 
-<!-- Modal de pago -->
+<!-- ═══════════════ MODAL DE PAGO ═══════════════ -->
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -324,10 +378,18 @@
 
 {% block extra_js %}
 <script>
-    const cart = {};  // { key: {type, id, name, price, qty} }
+    // ═══════════════════════════════════════════════════════════════
+    // ESTADO GLOBAL
+    // ═══════════════════════════════════════════════════════════════
+    const cart = {};
     const csrfToken = '{{ csrf_token }}';
+    const exchangeRate = parseFloat('{{ company.usd_exchange_rate }}') || 17.50;
     let currentTotal = 0;
+    let currentMethod = 'CASH_MXN';
 
+    // ═══════════════════════════════════════════════════════════════
+    // CARRITO
+    // ═══════════════════════════════════════════════════════════════
     function addToCart(el) {
         const type = el.dataset.type;
         const id = el.dataset.id;
@@ -409,179 +471,189 @@
         renderCart();
     }
 
-    // ─── Estado del pago ───
-let currentMethod = 'CASH_MXN';
-const exchangeRate = parseFloat('{{ company.usd_exchange_rate }}') || 17.50;
+    // ═══════════════════════════════════════════════════════════════
+    // MODAL DE PAGO
+    // ═══════════════════════════════════════════════════════════════
+    function openPayment() {
+        if (currentTotal <= 0) return;
 
-function openPayment() {
-    if (currentTotal <= 0) return;
+        document.getElementById('modal-total').textContent = '$' + currentTotal.toFixed(2);
+        document.getElementById('transfer-amount').textContent = '$' + currentTotal.toFixed(2);
 
-    document.getElementById('modal-total').textContent = '$' + currentTotal.toFixed(2);
-    document.getElementById('transfer-amount').textContent = '$' + currentTotal.toFixed(2);
+        document.getElementById('paid-mxn').value = currentTotal.toFixed(2);
+        document.getElementById('paid-usd-only').value = '';
+        document.getElementById('paid-mxn-mixed').value = '';
+        document.getElementById('paid-usd-mixed').value = '';
 
-    // Resetear campos
-    document.getElementById('paid-mxn').value = currentTotal.toFixed(2);
-    document.getElementById('paid-usd-only').value = '';
-    document.getElementById('paid-mxn-mixed').value = '';
-    document.getElementById('paid-usd-mixed').value = '';
-
-    // Reset método a CASH_MXN
-    setPaymentMethod('CASH_MXN');
-
-    new bootstrap.Modal(document.getElementById('paymentModal')).show();
-}
-
-function setPaymentMethod(method) {
-    currentMethod = method;
-
-    // Resaltar botón activo
-    document.querySelectorAll('.method-btn').forEach(btn => {
-        btn.classList.remove('active', 'btn-primary', 'btn-success', 'btn-warning', 'btn-info');
-        if (btn.dataset.method === method) {
-            btn.classList.add('active');
-        }
-    });
-
-    // Mostrar panel correspondiente
-    document.querySelectorAll('.pay-panel').forEach(panel => {
-        panel.classList.toggle('d-none', panel.dataset.method !== method);
-    });
-
-    // Mostrar/ocultar caja de cambio
-    document.getElementById('change-box').style.display =
-        (method === 'TRANSFER') ? 'none' : 'flex';
-
-    recalcPayment();
-}
-
-function recalcPayment() {
-    let paidMxn = 0;
-    let paidUsd = 0;
-    let totalPaidMxn = 0;
-
-    if (currentMethod === 'CASH_MXN') {
-        paidMxn = parseFloat(document.getElementById('paid-mxn').value) || 0;
-        totalPaidMxn = paidMxn;
-
-    } else if (currentMethod === 'CASH_USD') {
-        paidUsd = parseFloat(document.getElementById('paid-usd-only').value) || 0;
-        totalPaidMxn = paidUsd * exchangeRate;
-        document.getElementById('usd-equivalent').textContent =
-            '$' + totalPaidMxn.toFixed(2) + ' MXN';
-
-    } else if (currentMethod === 'MIXED') {
-        paidMxn = parseFloat(document.getElementById('paid-mxn-mixed').value) || 0;
-        paidUsd = parseFloat(document.getElementById('paid-usd-mixed').value) || 0;
-        totalPaidMxn = paidMxn + (paidUsd * exchangeRate);
-        document.getElementById('mixed-equivalent').textContent =
-            '$' + totalPaidMxn.toFixed(2) + ' MXN';
-
-    } else if (currentMethod === 'TRANSFER') {
-        totalPaidMxn = currentTotal;
+        setPaymentMethod('CASH_MXN');
+        new bootstrap.Modal(document.getElementById('paymentModal')).show();
     }
 
-    // Calcular cambio (siempre en MXN)
-    const change = Math.max(0, totalPaidMxn - currentTotal);
-    document.getElementById('modal-change').textContent = '$' + change.toFixed(2);
+    function setPaymentMethod(method) {
+        currentMethod = method;
 
-    // Deshabilitar botón si el pago no cubre el total
-    const btn = document.getElementById('btn-confirm-sale');
-    const insufficient = currentMethod !== 'TRANSFER' && totalPaidMxn < currentTotal;
-    btn.disabled = insufficient;
-    if (insufficient) {
-        btn.textContent = 'Pago insuficiente';
-    } else {
-        btn.textContent = 'Confirmar Venta';
-    }
-}
-
-// Listeners
-document.querySelectorAll('.method-btn').forEach(btn => {
-    btn.addEventListener('click', () => setPaymentMethod(btn.dataset.method));
-});
-
-['paid-mxn', 'paid-usd-only', 'paid-mxn-mixed', 'paid-usd-mixed'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', recalcPayment);
-});
-
-// Reemplaza la función confirmSale() anterior
-async function confirmSale() {
-    let paid_mxn = 0;
-    let paid_usd = 0;
-
-    if (currentMethod === 'CASH_MXN') {
-        paid_mxn = parseFloat(document.getElementById('paid-mxn').value) || 0;
-    } else if (currentMethod === 'CASH_USD') {
-        paid_usd = parseFloat(document.getElementById('paid-usd-only').value) || 0;
-    } else if (currentMethod === 'MIXED') {
-        paid_mxn = parseFloat(document.getElementById('paid-mxn-mixed').value) || 0;
-        paid_usd = parseFloat(document.getElementById('paid-usd-mixed').value) || 0;
-    } else if (currentMethod === 'TRANSFER') {
-        paid_mxn = currentTotal;
-    }
-
-    const btn = document.getElementById('btn-confirm-sale');
-    btn.disabled = true;
-    btn.textContent = 'Procesando...';
-
-    try {
-        const items = Object.values(cart).map(i => ({
-            type: i.type,
-            id: i.id,
-            qty: i.qty,
-            price: i.price,
-        }));
-
-        const res = await fetch('{% url "sales:pos" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-            },
-            body: JSON.stringify({
-                items: items,
-                payment_method: currentMethod,
-                paid_mxn: paid_mxn,
-                paid_usd: paid_usd,
-                customer: document.getElementById('customer-input').value,
-            }),
+        document.querySelectorAll('.method-btn').forEach(btn => {
+            btn.classList.remove('active', 'btn-primary', 'btn-success', 'btn-warning', 'btn-info');
+            if (btn.dataset.method === method) {
+                btn.classList.add('active');
+            }
         });
 
-        const data = await res.json();
+        document.querySelectorAll('.pay-panel').forEach(panel => {
+            panel.classList.toggle('d-none', panel.dataset.method !== method);
+        });
 
-        if (data.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-            for (const k in cart) delete cart[k];
-            renderCart();
-            document.getElementById('customer-input').value = '';
+        document.getElementById('change-box').style.display =
+            (method === 'TRANSFER') ? 'none' : 'flex';
 
-            let msg = `✅ Venta ${data.sale_folio}\nTotal: $${data.total} MXN`;
-            if (currentMethod === 'CASH_USD' || currentMethod === 'MIXED') {
-                msg += `\nPagó: ${data.paid_usd} USD (TC: $${data.exchange_rate})`;
-            }
-            msg += `\nCambio: $${data.change} MXN`;
-            alert(msg);
-        } else {
-            alert('Error: ' + data.error);
-        }
-    } catch (e) {
-        alert('Error de conexión: ' + e);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Confirmar Venta';
+        recalcPayment();
     }
-}
 
-    // Búsqueda
+    function recalcPayment() {
+        let paidMxn = 0;
+        let paidUsd = 0;
+        let totalPaidMxn = 0;
+
+        if (currentMethod === 'CASH_MXN') {
+            paidMxn = parseFloat(document.getElementById('paid-mxn').value) || 0;
+            totalPaidMxn = paidMxn;
+        } else if (currentMethod === 'CASH_USD') {
+            paidUsd = parseFloat(document.getElementById('paid-usd-only').value) || 0;
+            totalPaidMxn = paidUsd * exchangeRate;
+            document.getElementById('usd-equivalent').textContent = '$' + totalPaidMxn.toFixed(2) + ' MXN';
+        } else if (currentMethod === 'MIXED') {
+            paidMxn = parseFloat(document.getElementById('paid-mxn-mixed').value) || 0;
+            paidUsd = parseFloat(document.getElementById('paid-usd-mixed').value) || 0;
+            totalPaidMxn = paidMxn + (paidUsd * exchangeRate);
+            document.getElementById('mixed-equivalent').textContent = '$' + totalPaidMxn.toFixed(2) + ' MXN';
+        } else if (currentMethod === 'TRANSFER') {
+            totalPaidMxn = currentTotal;
+        }
+
+        const change = Math.max(0, totalPaidMxn - currentTotal);
+        document.getElementById('modal-change').textContent = '$' + change.toFixed(2);
+
+        const btn = document.getElementById('btn-confirm-sale');
+        const insufficient = currentMethod !== 'TRANSFER' && totalPaidMxn < currentTotal;
+        btn.disabled = insufficient;
+        btn.textContent = insufficient ? 'Pago insuficiente' : 'Confirmar Venta';
+    }
+
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.addEventListener('click', () => setPaymentMethod(btn.dataset.method));
+    });
+
+    ['paid-mxn', 'paid-usd-only', 'paid-mxn-mixed', 'paid-usd-mixed'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', recalcPayment);
+    });
+
+    async function confirmSale() {
+        let paid_mxn = 0;
+        let paid_usd = 0;
+
+        if (currentMethod === 'CASH_MXN') {
+            paid_mxn = parseFloat(document.getElementById('paid-mxn').value) || 0;
+        } else if (currentMethod === 'CASH_USD') {
+            paid_usd = parseFloat(document.getElementById('paid-usd-only').value) || 0;
+        } else if (currentMethod === 'MIXED') {
+            paid_mxn = parseFloat(document.getElementById('paid-mxn-mixed').value) || 0;
+            paid_usd = parseFloat(document.getElementById('paid-usd-mixed').value) || 0;
+        } else if (currentMethod === 'TRANSFER') {
+            paid_mxn = currentTotal;
+        }
+
+        const btn = document.getElementById('btn-confirm-sale');
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+
+        try {
+            const items = Object.values(cart).map(i => ({
+                type: i.type, id: i.id, qty: i.qty, price: i.price,
+            }));
+
+            const res = await fetch('{% url "sales:pos" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({
+                    items: items,
+                    payment_method: currentMethod,
+                    paid_mxn: paid_mxn,
+                    paid_usd: paid_usd,
+                    customer: document.getElementById('customer-input').value,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (data.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                for (const k in cart) delete cart[k];
+                renderCart();
+                document.getElementById('customer-input').value = '';
+
+                let msg = `✅ Venta ${data.sale_folio}\nTotal: $${data.total} MXN`;
+                if (currentMethod === 'CASH_USD' || currentMethod === 'MIXED') {
+                    msg += `\nPagó: ${data.paid_usd} USD (TC: $${data.exchange_rate})`;
+                }
+                msg += `\nCambio: $${data.change} MXN`;
+                alert(msg);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (e) {
+            alert('Error de conexión: ' + e);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Venta';
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BÚSQUEDA
+    // ═══════════════════════════════════════════════════════════════
     document.getElementById('search-input')?.addEventListener('input', function() {
         const q = this.value.toLowerCase().trim();
+
+        if (!q) {
+            applyCategoryFilter(getActiveCategory());
+            return;
+        }
+
         document.querySelectorAll('.pos-card').forEach(card => {
-            const name = card.dataset.name;
-            card.style.display = (!q || name.includes(q)) ? '' : 'none';
+            const match = card.dataset.name.includes(q);
+            card.style.display = match ? '' : 'none';
+        });
+
+        // Ocultar secciones vacías
+        document.querySelectorAll('.category-section').forEach(section => {
+            const visible = section.querySelectorAll('.pos-card:not([style*="display: none"])');
+            section.style.display = visible.length > 0 ? '' : 'none';
         });
     });
 
-    // Filtros por categoría
+    // ═══════════════════════════════════════════════════════════════
+    // FILTRO POR CATEGORÍA
+    // ═══════════════════════════════════════════════════════════════
+    function getActiveCategory() {
+        const active = document.querySelector('.pos-filter.btn-primary');
+        return active ? active.dataset.cat : 'all';
+    }
+
+    function applyCategoryFilter(cat) {
+        document.querySelectorAll('.pos-card').forEach(card => card.style.display = '');
+
+        if (cat === 'all') {
+            document.querySelectorAll('.category-section').forEach(s => s.style.display = '');
+        } else {
+            document.querySelectorAll('.category-section').forEach(section => {
+                section.style.display = (section.dataset.sectionCat === cat) ? '' : 'none';
+            });
+        }
+    }
+
     document.querySelectorAll('.pos-filter').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.pos-filter').forEach(b => {
@@ -591,14 +663,10 @@ async function confirmSale() {
             this.classList.remove('btn-light');
             this.classList.add('btn-primary');
 
-            const cat = this.dataset.cat;
-            document.querySelectorAll('.pos-card').forEach(card => {
-                if (cat === 'all' || card.dataset.cat === cat) {
-                    card.style.display = '';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+
+            applyCategoryFilter(this.dataset.cat);
         });
     });
 </script>

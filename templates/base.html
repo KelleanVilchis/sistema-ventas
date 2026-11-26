@@ -6,9 +6,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{% block title %}Distrito 21 | Sistema{% endblock %}</title>
+    <title>{% block title %}POS | Sistema{% endblock %}</title>
 
-    <meta name="theme-color" content="#111827">
+    <meta name="theme-color" content="#09090d">
 
     <!-- Favicon -->
     <link rel="shortcut icon"
@@ -29,12 +29,27 @@
 
     <!-- Estilos personalizados -->
     <style>
+        :root {
+            --d21-sidebar-width: 260px;
+            --d21-sidebar-mini-width: 74px;
+            --d21-dark-surface: #0b0b10;
+            --d21-header-surface: radial-gradient(circle at 85% 40%, rgba(76, 29, 149, 0.22), transparent 55%), #09090d;
+        }
+
+        /* Barra superior igualada en color */
+        .app-header-primary {
+            background: var(--d21-header-surface) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
         /* Marca */
         .d21-brand {
             display: flex;
             flex-direction: column;
             text-decoration: none;
             line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
         }
 
         .d21-brand-name {
@@ -52,37 +67,208 @@
             margin-top: 4px;
         }
 
-        /* Botón hamburguesa */
+        /* Botón hamburguesa / toggle lateral */
         .d21-menu-toggle {
-            width: 42px;
-            height: 42px;
-            display: flex;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 5px;
-            border: none;
-            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
             color: #ffffff;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 10px;
+            flex-shrink: 0;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
 
         .d21-menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.16);
         }
 
         .d21-menu-toggle span {
             display: block;
-            width: 22px;
+            width: 19px;
             height: 2px;
             background: currentColor;
             border-radius: 5px;
         }
 
-        /* Fondo del menú móvil */
-        .app-header-menu.app-header-mobile-drawer {
-            background-color: #ffffff;
+        /* ======================================= */
+        /* SIDEBAR LATERAL IZQUIERDO               */
+        /* ======================================= */
+        .d21-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--d21-sidebar-width);
+            height: 100vh;
+            background-color: var(--d21-dark-surface);
+            border-right: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+            z-index: 1045;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+                        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            overflow-x: hidden;
+        }
+
+        .d21-sidebar-header {
+            min-height: 70px;
+            padding: 0 1.15rem;
+            background: var(--d21-header-surface);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .d21-sidebar-close {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background-color 0.2s ease;
+        }
+
+        .d21-sidebar-close:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .d21-sidebar-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0.85rem 0.75rem;
+        }
+
+        .d21-nav-section {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.42);
+            padding: 0.85rem 0.75rem 0.35rem;
+            white-space: nowrap;
+            transition: opacity 0.2s ease;
+        }
+
+        .d21-nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 10px;
+            color: rgba(255, 255, 255, 0.72);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border: 0;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.18s ease, color 0.18s ease, padding 0.2s ease;
+        }
+
+        .d21-nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.07);
+            color: #ffffff;
+        }
+
+        .d21-nav-link.active {
+            background-color: rgba(59, 130, 246, 0.18);
+            color: #93c5fd;
+            font-weight: 700;
+        }
+
+        .d21-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        .d21-nav-icon {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: inherit;
+        }
+
+        .d21-nav-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: opacity 0.18s ease;
+        }
+
+        .d21-submenu {
+            padding-left: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .d21-submenu .d21-nav-link {
+            padding: 0.52rem 0.75rem;
+            font-size: 0.86rem;
+        }
+
+        .d21-nav-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+            opacity: 0.55;
+            flex-shrink: 0;
+        }
+
+        .d21-nav-link.active .d21-nav-dot {
+            opacity: 1;
+        }
+
+        .d21-chevron {
+            transition: transform 0.2s ease, opacity 0.18s ease;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        [aria-expanded="true"] .d21-chevron {
+            transform: rotate(180deg);
+        }
+
+        /* Backdrop solo para móviles */
+        .d21-sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 1040;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease, visibility 0.22s ease;
+        }
+
+        .d21-sidebar-backdrop.is-open {
+            opacity: 1;
+            visibility: visible;
         }
 
         /* Contenido */
@@ -90,8 +276,86 @@
             min-height: calc(100vh - 160px);
         }
 
-        /* Ajustes para móviles */
+        /* ======================================= */
+        /* MODO ESCRITORIO: SIDEBAR FIJO Y MINIMIZABLE */
+        /* ======================================= */
+        @media (min-width: 992px) {
+            body.d21-has-sidebar .app-page {
+                padding-left: var(--d21-sidebar-width);
+                transition: padding-left 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+
+            /* Estado minimizado en escritorio */
+            body.d21-sidebar-minimized .app-page {
+                padding-left: var(--d21-sidebar-mini-width);
+            }
+
+            body.d21-sidebar-minimized .d21-sidebar {
+                width: var(--d21-sidebar-mini-width);
+            }
+
+            body.d21-sidebar-minimized .d21-sidebar-header {
+                justify-content: center;
+                padding: 0 0.5rem;
+            }
+
+            body.d21-sidebar-minimized .d21-sidebar .d21-brand-description,
+            body.d21-sidebar-minimized .d21-nav-text,
+            body.d21-sidebar-minimized .d21-chevron {
+                display: none !important;
+            }
+
+            body.d21-sidebar-minimized .d21-sidebar .d21-brand-name {
+                font-size: 16px;
+                letter-spacing: 0.5px;
+            }
+
+            body.d21-sidebar-minimized .d21-nav-section {
+                text-align: center;
+                padding-left: 0;
+                padding-right: 0;
+                font-size: 0;
+            }
+
+            body.d21-sidebar-minimized .d21-nav-section::after {
+                content: "•••";
+                font-size: 11px;
+                letter-spacing: 2px;
+            }
+
+            body.d21-sidebar-minimized .d21-nav-link {
+                justify-content: center;
+                padding: 0.7rem 0;
+            }
+
+            body.d21-sidebar-minimized .d21-nav-left {
+                gap: 0;
+                justify-content: center;
+            }
+
+            body.d21-sidebar-minimized .d21-submenu {
+                padding-left: 0;
+            }
+
+            /* Ocultamos botón X móvil en escritorio */
+            .d21-sidebar-close {
+                display: none;
+            }
+        }
+
+        /* ======================================= */
+        /* MODO TELÉFONO / TABLET: PANEL DESLIZABLE */
+        /* ======================================= */
         @media (max-width: 991.98px) {
+            .d21-sidebar {
+                transform: translateX(-100%);
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+            }
+
+            .d21-sidebar.is-open {
+                transform: translateX(0);
+            }
+
             .app-header-primary {
                 min-height: 65px;
             }
@@ -111,11 +375,11 @@
 <body id="kt_body"
       data-kt-app-header-stacked="true"
       data-kt-app-header-primary-enabled="true"
-      data-kt-app-header-secondary-enabled="true"
+      data-kt-app-header-secondary-enabled="false"
       data-kt-app-toolbar-enabled="false"
-      class="app-default">
+      class="app-default d21-has-sidebar">
 
-    <!-- Configuración del tema -->
+    <!-- Configuración del tema y estado guardado del sidebar -->
     <script>
         var defaultThemeMode = "light";
         var themeMode;
@@ -137,7 +401,258 @@
 
             document.documentElement.setAttribute("data-bs-theme", themeMode);
         }
+
+        if (localStorage.getItem("d21_sidebar_minimized") === "true" && window.innerWidth >= 992) {
+            document.body.classList.add("d21-sidebar-minimized");
+        }
     </script>
+
+    <!-- Backdrop (solo móvil) -->
+    <div id="d21SidebarBackdrop" class="d21-sidebar-backdrop"></div>
+
+    <!-- ======================================= -->
+    <!-- MENÚ LATERAL IZQUIERDO FIJO / MINIMIZABLE -->
+    <!-- ======================================= -->
+    <aside id="d21Sidebar" class="d21-sidebar" aria-label="Menú principal">
+        <div class="d21-sidebar-header">
+            <a href="/" class="d21-brand">
+                <span class="d21-brand-name">POS</span>
+                <span class="d21-brand-description">VILCHI'S</span>
+            </a>
+            <button type="button" id="d21SidebarClose" class="d21-sidebar-close" aria-label="Cerrar menú">
+                <i class="ki-duotone ki-cross fs-2">
+                    <span class="path1"></span>
+                    <span class="path2"></span>
+                </i>
+            </button>
+        </div>
+
+        <nav class="d21-sidebar-body">
+            <div class="d21-nav-section">General</div>
+
+            <!-- Dashboard -->
+            <a href="{% url 'dashboard' %}"
+               class="d21-nav-link {% if request.path == '/' or request.path == '/dashboard/' %}active{% endif %}"
+               title="Dashboard">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-element-11 fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Dashboard</span>
+                </span>
+            </a>
+
+            <!-- Compañías -->
+            <a href="{% url 'company:company_index' %}"
+               class="d21-nav-link {% if '/company/' in request.path %}active{% endif %}"
+               title="Compañías">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-office-bag fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Compañías</span>
+                </span>
+            </a>
+
+            <!-- Usuarios -->
+            {% if perms.accounts.view_appuser %}
+            <a href="{% url 'accounts:list_users' %}"
+               class="d21-nav-link {% if '/accounts/' in request.path %}active{% endif %}"
+               title="Usuarios">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-people fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Usuarios</span>
+                </span>
+            </a>
+            {% endif %}
+
+            <div class="d21-nav-section">Operación</div>
+
+            <!-- Catálogo (Desplegable) -->
+            <button type="button"
+                    class="d21-nav-link {% if '/catalog/' in request.path %}active{% endif %}"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#d21CatalogSubmenu"
+                    aria-expanded="{% if '/catalog/' in request.path %}true{% else %}false{% endif %}"
+                    aria-controls="d21CatalogSubmenu"
+                    title="Catálogo">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-package fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Catálogo</span>
+                </span>
+                <i class="ki-duotone ki-down d21-chevron"></i>
+            </button>
+
+            <div class="collapse {% if '/catalog/' in request.path %}show{% endif %}" id="d21CatalogSubmenu">
+                <div class="d21-submenu">
+                    <a href="{% url 'catalog:product_list' %}"
+                       class="d21-nav-link {% if '/catalog/products/' in request.path %}active{% endif %}"
+                       title="Productos">
+                        <span class="d21-nav-left">
+                            <span class="d21-nav-icon">
+                                <span class="d21-nav-dot"></span>
+                            </span>
+                            <span class="d21-nav-text">Productos</span>
+                        </span>
+                    </a>
+
+                    <a href="{% url 'catalog:category_list' %}"
+                       class="d21-nav-link {% if '/catalog/categories/' in request.path %}active{% endif %}"
+                       title="Categorías">
+                        <span class="d21-nav-left">
+                            <span class="d21-nav-icon">
+                                <span class="d21-nav-dot"></span>
+                            </span>
+                            <span class="d21-nav-text">Categorías</span>
+                        </span>
+                    </a>
+
+                    {% comment %}
+                    <a href="{% url 'catalog:currency_list' %}"
+                       class="d21-nav-link {% if '/catalog/currencies/' in request.path %}active{% endif %}"
+                       title="Monedas">
+                        <span class="d21-nav-left">
+                            <span class="d21-nav-icon">
+                                <span class="d21-nav-dot"></span>
+                            </span>
+                            <span class="d21-nav-text">Monedas</span>
+                        </span>
+                    </a>
+                    {% endcomment %}
+                </div>
+            </div>
+
+            <!-- Combos -->
+            <a href="{% url 'sales:combo_list' %}"
+               class="d21-nav-link {% if 'combos/' in request.path %}active{% endif %}"
+               title="Combos">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-parcel fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Combos</span>
+                </span>
+            </a>
+
+            <!-- Pedidos -->
+            <a href="{% url 'sales:order_list' %}"
+               class="d21-nav-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}"
+               title="Pedidos">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-delivery fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Pedidos</span>
+                </span>
+            </a>
+
+            <!-- Ventas -->
+            <a href="{% url 'sales:sale_list' %}"
+               class="d21-nav-link {% if '/ventas/' in request.path and '/ventas/pedidos/' not in request.path and '/ventas/gastos/' not in request.path and '/devoluciones/' not in request.path %}active{% endif %}"
+               title="Ventas">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-chart-simple fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Ventas</span>
+                </span>
+            </a>
+
+            <!-- Gastos -->
+            <a href="{% url 'sales:expense_list' %}"
+               class="d21-nav-link {% if '/ventas/gastos/' in request.path %}active{% endif %}"
+               title="Gastos">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-wallet fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Gastos</span>
+                </span>
+            </a>
+
+            <!-- Devoluciones -->
+            <a href="{% url 'sales:return_list' %}"
+               class="d21-nav-link {% if '/devoluciones/' in request.path %}active{% endif %}"
+               title="Devoluciones">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-arrows-loop fs-2">
+                            <span class="path1"></span><span class="path2"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Devoluciones</span>
+                </span>
+            </a>
+
+            <div class="d21-nav-section">Caja y POS</div>
+
+            <!-- Tipo de cambio -->
+            {% if user.is_authenticated %}
+            <a href="{% url 'sales:exchange_rate' %}"
+               class="d21-nav-link {% if 'tipo-de-cambio' in request.path or 'exchange' in request.path %}active{% endif %}"
+               title="Tipo de cambio">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-dollar fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">
+                        TC: {{ user.owned_companies.first.usd_exchange_rate|default:"17.50" }}
+                    </span>
+                </span>
+            </a>
+            {% endif %}
+
+            <!-- Cortes -->
+            <a href="{% url 'sales:shift_list' %}"
+               class="d21-nav-link {% if '/pos/turnos/' in request.path %}active{% endif %}"
+               title="Cortes">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-time fs-2">
+                            <span class="path1"></span><span class="path2"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Cortes</span>
+                </span>
+            </a>
+
+            <!-- Modo Venta -->
+            <a href="{% url 'sales:pos' %}"
+               class="d21-nav-link {% if '/pos/' in request.path and '/pos/turnos/' not in request.path %}active{% endif %}"
+               title="Modo Venta">
+                <span class="d21-nav-left">
+                    <span class="d21-nav-icon">
+                        <i class="ki-duotone ki-shop fs-2">
+                            <span class="path1"></span><span class="path2"></span><span class="path3"></span><span class="path4"></span><span class="path5"></span>
+                        </i>
+                    </span>
+                    <span class="d21-nav-text">Modo Venta</span>
+                </span>
+            </a>
+        </nav>
+    </aside>
 
     <!-- Aplicación -->
     <div id="kt_app_root"
@@ -163,14 +678,15 @@
                                 d-flex align-items-center
                                 justify-content-between">
 
-                        <!-- Logo y hamburguesa -->
+                        <!-- Botón minimizar/abrir menú lateral -->
                         <div class="d-flex align-items-center">
 
-                            <!-- Botón hamburguesa -->
                             <button type="button"
-                                    id="kt_app_header_menu_toggle"
-                                    class="d-lg-none d21-menu-toggle me-3"
-                                    aria-label="Abrir menú">
+                                    id="d21SidebarToggle"
+                                    class="d21-menu-toggle me-3"
+                                    aria-label="Minimizar o abrir menú"
+                                    aria-controls="d21Sidebar"
+                                    aria-expanded="true">
 
                                 <span></span>
                                 <span></span>
@@ -178,8 +694,8 @@
 
                             </button>
 
-                            <!-- Marca -->
-                            <a href="/" class="d21-brand">
+                            <!-- Marca visible solo en móvil (en escritorio ya está fija en el sidebar) -->
+                            <a href="/" class="d21-brand d-lg-none">
 
                                 <span class="d21-brand-name">
                                     POS
@@ -197,7 +713,7 @@
                         <div class="app-navbar d-flex align-items-center">
 
                             <!-- Notificaciones -->
-                            <div class="app-navbar-item ms-2">
+                            <div class="app-navbar-item ms-1 ms-md-2">
 
                                 <button type="button"
                                         class="btn btn-icon btn-color-white
@@ -213,23 +729,25 @@
                                 </button>
 
                             </div>
-                            <!-- Tipo de cambio (visible solo si hay empresa activa) -->
+
+                            <!-- Tipo de cambio (visible en móvil y escritorio) -->
                             {% if user.is_authenticated %}
-                            <div class="app-navbar-item ms-2 d-none d-md-block">
+                            <div class="app-navbar-item ms-1 ms-md-2">
                                 <a href="{% url 'sales:exchange_rate' %}"
-                                class="btn btn-sm btn-light-primary d-flex align-items-center"
+                                class="btn btn-sm btn-light-primary d-flex align-items-center px-2 px-md-3"
                                 title="Editar tipo de cambio">
                                     <i class="ki-duotone ki-dollar fs-5 me-1">
                                         <span class="path1"></span><span class="path2"></span><span class="path3"></span>
                                     </i>
-                                    <span class="fw-bold" id="navbar-tc">
+                                    <span class="fw-bold fs-8 fs-md-7" id="navbar-tc">
                                         {{ user.owned_companies.first.usd_exchange_rate|default:"17.50" }}
                                     </span>
                                 </a>
                             </div>
                             {% endif %}
+
                             <!-- Usuario + Cerrar sesión -->
-                            <div class="app-navbar-item ms-2">
+                            <div class="app-navbar-item ms-1 ms-md-2">
                                 <div class="d-flex align-items-center">
 
                                     <div class="d-none d-sm-flex flex-column text-end me-3">
@@ -241,7 +759,7 @@
                                         </span>
                                     </div>
 
-                                    <div class="symbol symbol-35px me-3">
+                                    <div class="symbol symbol-35px me-2 me-md-3">
                                         <div class="symbol-label bg-light-primary text-primary fw-bold">
                                             {{ user.username|default:"U"|slice:":1"|upper }}
                                         </div>
@@ -251,9 +769,9 @@
                                         <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
                                             {% csrf_token %}
                                             <button type="submit"
-                                                    class="btn btn-sm btn-danger fw-semibold d-flex align-items-center"
+                                                    class="btn btn-sm btn-danger fw-semibold d-flex align-items-center px-2 px-md-3"
                                                     title="Cerrar sesión">
-                                                <i class="ki-duotone ki-exit-right fs-6 me-1">
+                                                <i class="ki-duotone ki-exit-right fs-6 me-md-1">
                                                     <span class="path1"></span>
                                                     <span class="path2"></span>
                                                 </i>
@@ -264,178 +782,6 @@
 
                                 </div>
                             </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- ======================================= -->
-                <!-- NAVEGACIÓN -->
-                <!-- ======================================= -->
-
-                <div id="kt_app_header_wrapper">
-
-                    <div class="app-header-secondary">
-
-                        <div class="app-container container-xxl
-                                    d-flex align-items-stretch">
-
-                            <!-- Menú responsivo de Keenthemes -->
-                            <div class="app-header-menu
-                                        app-header-mobile-drawer
-                                        align-items-stretch flex-grow-1"
-
-                                 data-kt-drawer="true"
-                                 data-kt-drawer-name="app-header-menu"
-                                 data-kt-drawer-activate="{default: true, lg: false}"
-                                 data-kt-drawer-overlay="true"
-                                 data-kt-drawer-width="250px"
-                                 data-kt-drawer-direction="start"
-                                 data-kt-drawer-toggle="#kt_app_header_menu_toggle"
-
-                                 data-kt-swapper="true"
-                                 data-kt-swapper-mode="{default: 'append', lg: 'prepend'}"
-                                 data-kt-swapper-parent="{default: '#kt_app_body', lg: '#kt_app_header_wrapper'}">
-
-                                <!-- Opciones -->
-                                <div id="kt_app_header_menu"
-                                     class="menu menu-rounded
-                                            menu-active-bg
-                                            menu-state-primary
-                                            menu-column menu-lg-row
-                                            menu-title-gray-700
-                                            menu-icon-gray-500
-                                            menu-arrow-gray-500
-                                            menu-bullet-gray-500
-                                            my-5 my-lg-0
-                                            align-items-stretch
-                                            fw-semibold px-2 px-lg-0"
-                                     data-kt-menu="true">
-
-                                    <!-- Dashboard -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'dashboard' %}"
-                                           class="menu-link {% if request.path == '/' %}active{% endif %}">
-                                            <span class="menu-title">Dashboard</span>
-                                        </a>
-                                    </div>
-
-                                    <!-- Compañías -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'company:company_index' %}"
-                                           class="menu-link {% if '/company/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Compañías</span>
-                                        </a>
-                                    </div>
-
-                                    <!-- Usuarios -->
-                                    {% if perms.accounts.view_appuser %}
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'accounts:list_users' %}"
-                                           class="menu-link {% if '/accounts/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Usuarios</span>
-                                        </a>
-                                    </div>
-                                    {% endif %}
-
-                                    <!-- Catálogo (Desplegable) -->
-                                    <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
-                                         data-kt-menu-placement="bottom-start"
-                                         class="menu-item menu-lg-down-accordion me-lg-2 {% if '/catalog/' in request.path %}here show{% endif %}">
-
-                                        <span class="menu-link">
-                                            <span class="menu-title">Catálogo</span>
-                                            <span class="menu-arrow d-lg-none"></span>
-                                        </span>
-
-                                        <div class="menu-sub menu-sub-lg-down-accordion menu-sub-lg-dropdown px-2 py-2 py-lg-4 w-lg-200px">
-
-                                            <!-- Productos -->
-                                            <div class="menu-item">
-                                                <a class="menu-link {% if '/catalog/products/' in request.path %}active{% endif %}" href="{% url 'catalog:product_list' %}">
-                                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">Productos</span>
-                                                </a>
-                                            </div>
-
-                                            <!-- Categorías -->
-                                            <div class="menu-item">
-                                                <a class="menu-link {% if '/catalog/categories/' in request.path %}active{% endif %}" href="{% url 'catalog:category_list' %}">
-                                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">Categorías</span>
-                                                </a>
-                                            </div>
-
-                                            <!-- Monedas 
-                                            <div class="menu-item">
-                                                <a class="menu-link {% if '/catalog/currencies/' in request.path %}active{% endif %}" href="{% url 'catalog:currency_list' %}">
-                                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">Monedas</span>
-                                                </a>
-                                            </div>
-                                            -->
-                                        </div>
-                                    </div>
-
-                                    <!-- Combos -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:combo_list' %}"
-                                           class="menu-link {% if 'combos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Combos</span>
-                                        </a>
-                                    </div>
-
-                                    <!-- Pedidos -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:order_list' %}"
-                                           class="menu-link {% if '/ventas/pedidos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Pedidos</span>
-                                        </a>
-                                    </div>
-
-                                    <!-- Ventas -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:sale_list' %}"
-                                           class="menu-link {% if '/ventas/' in request.path and '/ventas/pedidos/' not in request.path and '/ventas/gastos/' not in request.path and '/devoluciones/' not in request.path %}active{% endif %}">
-                                            <span class="menu-title">Ventas</span>
-                                        </a>
-                                    </div>
-
-                                    <!-- Gastos -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:expense_list' %}"
-                                           class="menu-link {% if '/ventas/gastos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Gastos</span>
-                                        </a>
-                                    </div>
-
-                                    <!-- Devoluciones (NUEVO) -->
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:return_list' %}"
-                                           class="menu-link {% if '/devoluciones/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Devoluciones</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:shift_list' %}"
-                                            class="menu-link {% if '/pos/turnos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Cortes</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item me-lg-2">
-                                        <a href="{% url 'sales:pos' %}"
-                                        class="menu-link {% if '/pos/' in request.path %}active{% endif %}">
-                                            <span class="menu-title">Modo Venta</span>
-                                        </a>
-                                    </div>
-
-                                </div>
-                                <!-- Fin opciones -->
-
-                            </div>
-                            <!-- Fin menú responsivo -->
 
                         </div>
 
@@ -505,59 +851,73 @@
     <!-- Scripts principales de Oswald -->
     <script src="{% static 'admin_theme/js/scripts.bundle.js' %}"></script>
 
+    <script>
+        (function () {
+            const sidebar = document.getElementById('d21Sidebar');
+            const backdrop = document.getElementById('d21SidebarBackdrop');
+            const toggleBtn = document.getElementById('d21SidebarToggle');
+            const closeBtn = document.getElementById('d21SidebarClose');
+            const desktopBreakpoint = 992;
+
+            if (!sidebar || !backdrop || !toggleBtn) return;
+
+            function isDesktop() {
+                return window.innerWidth >= desktopBreakpoint;
+            }
+
+            function openMobileSidebar() {
+                sidebar.classList.add('is-open');
+                backdrop.classList.add('is-open');
+                toggleBtn.setAttribute('aria-expanded', 'true');
+            }
+
+            function closeMobileSidebar() {
+                sidebar.classList.remove('is-open');
+                backdrop.classList.remove('is-open');
+                toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+
+            function toggleDesktopMinimize() {
+                const minimized = document.body.classList.toggle('d21-sidebar-minimized');
+                localStorage.setItem('d21_sidebar_minimized', minimized ? 'true' : 'false');
+                toggleBtn.setAttribute('aria-expanded', minimized ? 'false' : 'true');
+            }
+
+            toggleBtn.addEventListener('click', function () {
+                if (isDesktop()) {
+                    toggleDesktopMinimize();
+                } else {
+                    if (sidebar.classList.contains('is-open')) {
+                        closeMobileSidebar();
+                    } else {
+                        openMobileSidebar();
+                    }
+                }
+            });
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeMobileSidebar);
+            }
+
+            backdrop.addEventListener('click', closeMobileSidebar);
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !isDesktop() && sidebar.classList.contains('is-open')) {
+                    closeMobileSidebar();
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (isDesktop()) {
+                    closeMobileSidebar();
+                }
+            });
+        })();
+    </script>
+
     <!-- Scripts adicionales por página -->
     {% block extra_js %}
     {% endblock %}
 
-    <style>
-    /* Ajustes de navegación para escritorio */
-    @media (min-width: 992px) {
-
-        /* Altura de la barra secundaria */
-        .app-header-secondary {
-            height: 50px !important;
-            min-height: 50px !important;
-            padding: 0 !important;
-        }
-
-        /* Contenedor */
-        .app-header-secondary > .app-container {
-            height: 50px;
-            align-items: center !important;
-        }
-
-        /* Contenedor del menú */
-        .app-header-secondary .app-header-menu {
-            height: 100%;
-            display: flex;
-            align-items: center !important;
-        }
-
-        /* Menú horizontal */
-        .app-header-secondary #kt_app_header_menu {
-            height: 100%;
-            display: flex;
-            align-items: center !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-
-        /* Elementos del menú */
-        .app-header-secondary #kt_app_header_menu > .menu-item {
-            height: 100%;
-            display: flex;
-            align-items: center !important;
-        }
-
-        /* Enlaces */
-        .app-header-secondary #kt_app_header_menu .menu-link {
-            min-height: 50px;
-            display: flex;
-            align-items: center !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-        }
-    }
-    </style>
 </body>
 </html>

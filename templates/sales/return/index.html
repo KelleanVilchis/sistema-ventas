@@ -100,7 +100,7 @@
                     <tr>
                         <td><span class="badge badge-light-warning fw-bold fs-7">{{ r.folio_number }}</span></td>
                         <td><span class="badge badge-light-primary fw-bold">{{ r.sale.folio_number }}</span></td>
-                        <td><span class="badge badge-light-secondary fw-bold">{{ r.order.folio_number|default:r.order.id }}</span></td>
+                        <td><span class="badge badge-secondary fw-bold">{{ r.order.folio_number|default:r.order.id }}</span></td>
                         <td><span class="text-gray-800 fw-bold">{{ r.order.customer }}</span></td>
                         <td class="text-end fw-bold text-warning fs-6">${{ r.total_refunded }}</td>
                         <td class="text-center">
