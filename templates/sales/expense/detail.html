@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Distrito 21 | Gasto #{{ expense.id }}{% endblock %}
+
+{% block content %}
+<div class="card mb-5 mb-xl-10">
+    <div class="card-header border-0 pt-5">
+        <h3 class="card-title align-items-start flex-column">
+            <span class="card-label fw-bold fs-3 mb-1">
+                {{ expense.get_expense_type_display }}
+            </span>
+            <span class="text-muted mt-1 fw-semibold fs-7">
+                Gasto #{{ expense.id }} — {{ expense.company.name }}
+            </span>
+        </h3>
+        <div class="card-toolbar">
+            <a href="{% url 'sales:expense_list' %}" class="btn btn-sm btn-light-primary me-2">
+                <i class="ki-duotone ki-arrow-left fs-3"><span class="path1"></span><span class="path2"></span></i> Volver
+            </a>
+            <a href="{% url 'sales:expense_edit' expense.id %}" class="btn btn-sm btn-primary">
+                <i class="ki-duotone ki-pencil fs-3"><span class="path1"></span><span class="path2"></span></i> Editar
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body py-5">
+
+        <!-- ═══ Tarjetas resumen ═══ -->
+        <div class="row g-4 mb-8">
+            <div class="col-md-4">
+                <div class="card bg-light-danger border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Monto</span>
+                    <span class="fw-bold fs-2 text-danger">
+                        ${{ expense.amount|floatformat:2 }}
+                    </span>
+                    <span class="text-muted fs-9">
+                        {{ expense.currency.code|default:"MXN" }}
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card
+                    {% if expense.expense_type == 'INVESTMENT' %}bg-light-success
+                    {% elif expense.expense_type == 'EMERGENCY' %}bg-light-danger
+                    {% elif expense.expense_type == 'UNNECESSARY' %}bg-light-warning
+                    {% else %}bg-light-primary{% endif %} border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Tipo</span>
+                    <span class="fw-bold fs-3
+                        {% if expense.expense_type == 'INVESTMENT' %}text-success
+                        {% elif expense.expense_type == 'EMERGENCY' %}text-danger
+                        {% elif expense.expense_type == 'UNNECESSARY' %}text-warning
+                        {% else %}text-primary{% endif %}">
+                        {{ expense.get_expense_type_display }}
+                    </span>
+                    <span class="text-muted fs-9">Categoría del gasto</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light-info border-0 p-4 h-100">
+                    <span class="text-muted fs-8 fw-semibold">Estado</span>
+                    <span class="fw-bold fs-3 text-info">
+                        {{ expense.get_status_display }}
+                    </span>
+                    <span class="text-muted fs-9">Situación actual</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Info general ═══ -->
+        <div class="row g-6 mb-8">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header border-0 pt-5">
+                        <h3 class="card-title fw-bold fs-4">Información general</h3>
+                    </div>
+                    <div class="card-body pt-3">
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Gasto #</span>
+                            <span class="badge badge-light-dark fw-bold">{{ expense.id }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Tipo</span>
+                            <span class="badge
+                                {% if expense.expense_type == 'INVESTMENT' %}badge-light-success
+                                {% elif expense.expense_type == 'EMERGENCY' %}badge-light-danger
+                                {% elif expense.expense_type == 'UNNECESSARY' %}badge-light-warning
+                                {% else %}badge-light-info{% endif %} fw-bold">
+                                {{ expense.get_expense_type_display }}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Sucursal</span>
+                            <span class="badge badge-light-info fw-bold">{{ expense.company.name }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Registrado por</span>
+                            <span class="fw-bold text-gray-800">{{ expense.created_by.username|default:"—" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3">
+                            <span class="text-muted fw-semibold">Fecha del gasto</span>
+                            <span class="fw-bold text-gray-800">{{ expense.date_expense|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header border-0 pt-5">
+                        <h3 class="card-title fw-bold fs-4">Descripción</h3>
+                    </div>
+                    <div class="card-body pt-3">
+                        {% if expense.description %}
+                            <p class="text-gray-700 fs-6">{{ expense.description|linebreaks }}</p>
+                        {% else %}
+                            <div class="text-center py-10 text-muted">
+                                <i class="ki-duotone ki-document fs-5x mb-3"><span class="path1"></span><span class="path2"></span></i>
+                                <p class="fs-7">Sin descripción registrada</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ Detalle financiero ═══ -->
+        <div class="card">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title fw-bold fs-4">Detalle financiero</h3>
+            </div>
+            <div class="card-body pt-3">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Monto</span>
+                            <span class="fw-bold text-danger fs-5">${{ expense.amount|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Moneda</span>
+                            <span class="fw-bold text-gray-800">{{ expense.currency.code|default:"MXN" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3">
+                            <span class="text-muted fw-semibold">Estado</span>
+                            <span class="fw-bold
+                                {% if expense.status == 'APPROVED' %}text-success
+                                {% elif expense.status == 'REJECTED' %}text-danger
+                                {% else %}text-warning{% endif %}">
+                                {{ expense.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Fecha de registro</span>
+                            <span class="fw-bold text-gray-800">{{ expense.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3 border-bottom">
+                            <span class="text-muted fw-semibold">Última actualización</span>
+                            <span class="fw-bold text-gray-800">{{ expense.updated_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-3">
+                            <span class="text-muted fw-semibold">Afecta inventario</span>
+                            <span class="fw-bold">
+                                {% if expense.expense_type == 'INVESTMENT' %}
+                                    <span class="badge badge-light-success fs-8">Sí (suma stock)</span>
+                                {% else %}
+                                    <span class="badge badge-light-secondary fs-8">No</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

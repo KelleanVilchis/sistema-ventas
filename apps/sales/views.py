@@ -829,6 +829,25 @@ class ExpenseListView(BasePermissionMixin, View):
         })
 
 
+class ExpenseDetailView(BasePermissionMixin, View):
+    permission_required = "sales.view_expense"
+
+    def get(self, request, expense_id):
+        owner = AppUser.objects.get(id=request.user.id)
+        company = Company.objects.get(selected=True, owner=owner)
+
+        expense = get_object_or_404(
+            Expense.objects
+            .select_related('company', 'currency', 'created_by'),
+            id=expense_id,
+            company=company,
+        )
+
+        return render(request, 'sales/expense/detail.html', {
+            'expense': expense,
+        })
+
+
 class CreateExpenseView(BasePermissionMixin, View):
     permission_required = 'sales.add_expense'
 
